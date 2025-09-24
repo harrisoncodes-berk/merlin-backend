@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/v1"
     cors_origins: List[str] = ["http://localhost:5173"]
 
+    database_url: str
+    db_ssl_root_cert: Optional[str] = None
+
     supabase_jwks_url: Optional[str] = None
     supabase_issuer: Optional[str] = None
 

@@ -1,5 +1,6 @@
 import time
 from typing import Optional, Dict, Any
+
 import httpx
 from jose import jwt
 from fastapi import Header, HTTPException, status
@@ -12,6 +13,7 @@ _JWKS_EXP: float = 0
 
 
 async def _get_jwks(url: str) -> dict:
+    """Fetch JWKS with a 5-minute TTL cache."""
     global _JWKS_CACHE, _JWKS_EXP
     now = time.time()
     if _JWKS_CACHE and now < _JWKS_EXP:
@@ -24,12 +26,12 @@ async def _get_jwks(url: str) -> dict:
         return _JWKS_CACHE
 
 
-def _authz_token(authorization: Optional[str]) -> Optional[str]:
+def _bearer_token(authorization: Optional[str]) -> Optional[str]:
     if not authorization:
         return None
     parts = authorization.split(" ", 1)
     if len(parts) == 2 and parts[0].lower() == "bearer":
-        return parts[1]
+        return parts[1].strip()
     return None
 
 
@@ -37,7 +39,7 @@ async def get_current_user(
     authorization: Optional[str] = Header(default=None),
 ) -> CurrentUser:
     settings = get_settings()
-    token = _authz_token(authorization)
+    token = _bearer_token(authorization)
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token"
@@ -56,6 +58,7 @@ async def get_current_user(
     key = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
     if not key:
         raise HTTPException(status_code=401, detail="Signing key not found")
+
     try:
         payload = jwt.decode(
             token,
@@ -72,3 +75,22 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Token missing 'sub'")
 
     return CurrentUser(user_id=sub, email=payload.get("email"))
+
+
+async def require_user_id(authorization: Optional[str] = Header(default=None)) -> str:
+    """Return the authenticated user's id (`sub`) or 401."""
+    u = await get_current_user(authorization)
+    return u.user_id
+
+
+async def optional_current_user(
+    authorization: Optional[str] = Header(default=None),
+) -> Optional[CurrentUser]:
+    """Return user or None; never raises on missing/invalid token."""
+    token = _bearer_token(authorization)
+    if not token:
+        return None
+    try:
+        return await get_current_user(authorization)
+    except HTTPException:
+        return None

@@ -8,5 +8,19 @@
 *.njsproj
 *.sln
 *.sw?
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Centralized bytecode
+.pycache/
+
+# Virtual env, etc.
+.venv/
 .env
-.venv
+certs
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/

@@ -1,5 +1,9 @@
 fastapi
 uvicorn[standard]
-pydantic-settings
+sqlalchemy>=2.0
+asyncpg
+greenlet
+pydantic>=2
+pydantic-settings>=2
 httpx
 python-jose[cryptography]
