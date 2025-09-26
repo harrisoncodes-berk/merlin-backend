@@ -1,6 +1,8 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
+from app.schemas.common import Feature, InventoryItem, Skill
+
 
 class AbilityScores(BaseModel):
     str: int
@@ -11,29 +13,7 @@ class AbilityScores(BaseModel):
     cha: int
 
 
-class Skill(BaseModel):
-    key: str
-    proficient: bool
-    expertise: Optional[bool] = False
-
-
-class Feature(BaseModel):
-    id: str
-    name: str
-    summary: Optional[str] = None
-    uses: Optional[int] = None
-    maxUses: Optional[int] = None
-
-
-class InventoryItem(BaseModel):
-    id: str
-    name: str
-    quantity: int
-    weight: Optional[float] = None
-    description: Optional[str] = None
-
-
-class CharacterOut(BaseModel):
+class Character(BaseModel):
     id: str
     name: str
     race: str

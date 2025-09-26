@@ -4,11 +4,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import characters
-from app.schemas.character import CharacterOut
+from app.schemas.character import Character
 
 
-def _row_to_out(row: dict) -> CharacterOut:
-    return CharacterOut(
+def _row_to_out(row: dict) -> Character:
+    return Character(
         id=str(row["id"]),
         name=row["name"],
         race=row["race"],
@@ -29,7 +29,7 @@ def _row_to_out(row: dict) -> CharacterOut:
 
 async def list_characters_for_user(
     session: AsyncSession, user_id: str
-) -> list[CharacterOut]:
+) -> list[Character]:
     stmt = (
         select(
             characters.c.id,
@@ -58,7 +58,7 @@ async def list_characters_for_user(
 
 async def get_character_for_user(
     session: AsyncSession, user_id: str, id: str
-) -> Optional[CharacterOut]:
+) -> Optional[Character]:
     stmt = (
         select(
             characters.c.id,
