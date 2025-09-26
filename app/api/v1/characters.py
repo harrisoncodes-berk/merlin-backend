@@ -19,13 +19,13 @@ async def list_my_characters(
     return await list_characters_for_user(session, user_id)
 
 
-@router.get("/{character_id}", response_model=CharacterOut)
+@router.get("/{id}", response_model=CharacterOut)
 async def get_my_character(
-    character_id: str,
+    id: str,
     user_id: str = Depends(require_user_id),
     session: AsyncSession = Depends(get_session),
 ):
-    ch = await get_character_for_user(session, user_id, character_id)
+    ch = await get_character_for_user(session, user_id, id)
     if not ch:
         raise HTTPException(status_code=404, detail="Character not found")
     return ch

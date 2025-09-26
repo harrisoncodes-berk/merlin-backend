@@ -9,7 +9,7 @@ from app.schemas.character import CharacterOut
 
 def _row_to_out(row: dict) -> CharacterOut:
     return CharacterOut(
-        character_id=str(row["character_id"]),
+        id=str(row["id"]),
         name=row["name"],
         race=row["race"],
         className=row["class_name"],
@@ -32,7 +32,7 @@ async def list_characters_for_user(
 ) -> list[CharacterOut]:
     stmt = (
         select(
-            characters.c.character_id,
+            characters.c.id,
             characters.c.name,
             characters.c.race,
             characters.c.class_name,
@@ -57,11 +57,11 @@ async def list_characters_for_user(
 
 
 async def get_character_for_user(
-    session: AsyncSession, user_id: str, character_id: str
+    session: AsyncSession, user_id: str, id: str
 ) -> Optional[CharacterOut]:
     stmt = (
         select(
-            characters.c.character_id,
+            characters.c.id,
             characters.c.name,
             characters.c.race,
             characters.c.class_name,
@@ -77,7 +77,7 @@ async def get_character_for_user(
             characters.c.inventory,
             characters.c.spellcasting,
         )
-        .where((characters.c.user_id == user_id) & (characters.c.character_id == character_id))
+        .where((characters.c.user_id == user_id) & (characters.c.id == id))
         .limit(1)
     )
     res = await session.execute(stmt)

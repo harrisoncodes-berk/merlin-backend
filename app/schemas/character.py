@@ -34,7 +34,7 @@ class InventoryItem(BaseModel):
 
 
 class CharacterOut(BaseModel):
-    character_id: str
+    id: str
     name: str
     race: str
     className: str

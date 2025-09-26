@@ -7,7 +7,7 @@ metadata = MetaData()
 characters = Table(
     "characters",
     metadata,
-    Column("character_id", UUID(as_uuid=True), primary_key=True),
+    Column("id", UUID(as_uuid=True), primary_key=True),
     Column("user_id", UUID(as_uuid=True), nullable=False, index=True),
     Column("name", String, nullable=False),
     Column("race", String, nullable=False),
