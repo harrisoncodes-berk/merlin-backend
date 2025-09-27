@@ -1,16 +1,9 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Literal, Optional
+from pydantic import BaseModel
 
 from app.schemas.common import Feature, InventoryItem, Skill
 
-
-class AbilityBonuses(BaseModel):
-    strength: Optional[int] = Field(None, alias="str")
-    dexterity: Optional[int] = Field(None, alias="dex")
-    constitution: Optional[int] = Field(None, alias="con")
-    intelligence: Optional[int] = Field(None, alias="int")
-    wisdom: Optional[int] = Field(None, alias="wis")
-    charisma: Optional[int] = Field(None, alias="cha")
+AbilityKey = Literal["str", "dex", "con", "int", "wis", "cha"]
 
 
 class Race(BaseModel):
@@ -19,7 +12,7 @@ class Race(BaseModel):
     description: str
     size: str
     speed: int
-    abilityBonuses: AbilityBonuses
+    abilityBonuses: dict[AbilityKey, int]
     features: List[Feature] = []
 
 

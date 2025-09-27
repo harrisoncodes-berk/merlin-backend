@@ -1,16 +1,16 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.common import Feature, InventoryItem, Skill
 
 
 class AbilityScores(BaseModel):
-    str: int
-    dex: int
-    con: int
-    int: int
-    wis: int
-    cha: int
+    strength: int = Field(alias="str")
+    dexterity: int = Field(alias="dex")
+    constitution: int = Field(alias="con")
+    intelligence: int = Field(alias="int")
+    wisdom: int = Field(alias="wis")
+    charisma: int = Field(alias="cha")
 
 
 class Character(BaseModel):
