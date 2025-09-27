@@ -75,6 +75,6 @@ class Background(BaseModel):
     id: str
     name: str
     description: str
-    features: List[Feature] = []
-    skills: List[Skill] = []
-    inventory: List[InventoryItem] = []
+    features: Optional[List[Feature]]
+    skills: Optional[List[Skill]]
+    inventory: Optional[List[InventoryItem]]

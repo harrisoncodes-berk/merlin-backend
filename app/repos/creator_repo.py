@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import races, classes
-from app.schemas.creator import Race, Class, Weapon, WeaponChoice
+from app.models.tables import backgrounds, classes, races
+from app.schemas.creator import Background, Class, Race, Weapon, WeaponChoice
 
 
 def _race_row_to_out(row: dict) -> Race:
@@ -83,3 +83,26 @@ async def list_classes(session: AsyncSession) -> list[Class]:
     res = await session.execute(stmt)
     rows = res.mappings().all()
     return [_class_row_to_out(r) for r in rows]
+
+def _background_row_to_out(row: dict) -> Background:
+    return Background(
+        id=str(row["id"]),
+        name=row["name"],
+        description=row["description"],
+        features=row["features"] or None,
+        skills=row["skills"] or None,
+        inventory=row["inventory"] or None,
+    )
+
+async def list_backgrounds(session: AsyncSession) -> list[Background]:
+    stmt = select(
+        backgrounds.c.id,
+        backgrounds.c.name,
+        backgrounds.c.description,
+        backgrounds.c.features,
+        backgrounds.c.skills,
+        backgrounds.c.inventory,
+    )
+    res = await session.execute(stmt)
+    rows = res.mappings().all()
+    return [_background_row_to_out(r) for r in rows]
