@@ -5,7 +5,7 @@ from pydantic import BaseModel
 class Feature(BaseModel):
     id: str
     name: str
-    summary: Optional[str] = None
+    description: Optional[str] = None
     uses: Optional[int] = None
     maxUses: Optional[int] = None
 
