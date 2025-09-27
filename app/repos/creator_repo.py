@@ -87,6 +87,7 @@ async def list_classes(session: AsyncSession) -> list[Class]:
 def _background_row_to_out(row: dict) -> Background:
     return Background(
         id=str(row["id"]),
+        classId=str(row["class_id"]),
         name=row["name"],
         description=row["description"],
         features=row["features"] or None,
@@ -97,6 +98,7 @@ def _background_row_to_out(row: dict) -> Background:
 async def list_backgrounds(session: AsyncSession) -> list[Background]:
     stmt = select(
         backgrounds.c.id,
+        backgrounds.c.class_id,
         backgrounds.c.name,
         backgrounds.c.description,
         backgrounds.c.features,

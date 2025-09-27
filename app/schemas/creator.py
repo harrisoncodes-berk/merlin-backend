@@ -73,6 +73,7 @@ class Class(BaseModel):
 
 class Background(BaseModel):
     id: str
+    classId: str
     name: str
     description: str
     features: Optional[List[Feature]]
