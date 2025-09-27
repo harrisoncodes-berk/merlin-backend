@@ -22,7 +22,7 @@ def _ssl_context() -> ssl.SSLContext | bool:
         ctx.check_hostname = True
         ctx.verify_mode = ssl.CERT_REQUIRED
         return ctx
-    return True  # use system trust store
+    return True
 
 
 def get_engine() -> AsyncEngine:

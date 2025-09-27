@@ -65,10 +65,10 @@ class Class(BaseModel):
     description: str
     ac: int
     hitDice: HitDice
-    features: List[Feature] = []
-    skillChoices: SkillChoice
-    weaponChoices: List[WeaponChoice]
-    spellChoices: List[SpellChoice]
+    features: Optional[List[Feature]]
+    skillChoices: Optional[SkillChoice]
+    weaponChoices: Optional[List[WeaponChoice]]
+    spellChoices: Optional[List[SpellChoice]]
 
 
 class Background(BaseModel):
