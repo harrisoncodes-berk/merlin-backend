@@ -196,8 +196,8 @@ async def create_character(
         spellcasting_data = Spellcasting(
             ability="int",  # Default to intelligence for now
             slots={
-                1: SpellSlots(
-                    maximum=2,
+                "1": SpellSlots(
+                    max=2,
                     used=0,
                 ),
             },
@@ -211,7 +211,7 @@ async def create_character(
             {
                 "id": weapon.id,
                 "name": weapon.name,
-                "quantity": 1,
+                "quantity": 1,  # TODO: Need to add weight for weapons
                 "description": weapon.description,
             }
         )
@@ -220,36 +220,38 @@ async def create_character(
             {
                 "id": background_item["id"],
                 "name": background_item["name"],
-                "quantity": background_item["quantity"],
-                "description": background_item["description"],
+                "weight": background_item.get("weight", 0),
+                "quantity": background_item.get("quantity", 1),
+                "description": background_item.get("description"),
             }
         )
-
     # Insert character
-    insert_stmt = (
-        insert(characters)
-        .values(
-            id=uuid4(),
-            user_id=user_id,
-            name=character_draft.name,
-            race=race_row["name"],
-            class_name=class_row["name"],
-            background=background_row["name"],
-            level=1,
-            hp_current=hp_max,
-            hp_max=hp_max,
-            ac=ac,
-            speed=speed,
-            abilities=character_draft.abilities.model_dump(),
-            skills=[skill.model_dump() for skill in character_draft.skills],
-            features=(race_row["features"] or [])
-            + (class_row["features"] or [])
-            + (background_row["features"] or []),
-            inventory=(inventory or [] + (background_row["inventory"] or [])),
-            spellcasting=spellcasting_data,
-        )
-        .returning(characters)
-    )
+    # Build the base values
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "name": character_draft.name,
+        "race": race_row["name"],
+        "class_name": class_row["name"],
+        "background": background_row["name"],
+        "level": 1,
+        "hp_current": hp_max,
+        "hp_max": hp_max,
+        "ac": ac,
+        "speed": speed,
+        "abilities": character_draft.abilities.model_dump(),
+        "skills": [skill.model_dump() for skill in character_draft.skills],
+        "features": (race_row["features"] or [])
+        + (class_row["features"] or [])
+        + (background_row["features"] or []),
+        "inventory": inventory,
+    }
+
+    # Only add spellcasting if it's not None
+    if spellcasting_data is not None:
+        values["spellcasting"] = spellcasting_data
+
+    insert_stmt = insert(characters).values(**values).returning(characters)
 
     result = await session.execute(insert_stmt)
     character_row = result.mappings().first()

@@ -13,7 +13,7 @@ from app.schemas.common import (
 
 
 class SpellSlots(BaseModel):
-    maximum: int = Field(alias="max")
+    max: int
     used: int
 
 
