@@ -1,5 +1,5 @@
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 AbilityKey = Literal["str", "dex", "con", "int", "wis", "cha"]

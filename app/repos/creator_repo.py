@@ -1,4 +1,3 @@
-import uuid
 from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
@@ -11,7 +10,6 @@ from app.schemas.creator import (
     Weapon,
     WeaponChoice,
     CharacterDraft,
-    AbilityScores,
 )
 from app.schemas.character import Character, Spellcasting, SpellSlots
 from uuid import uuid4
@@ -215,6 +213,15 @@ async def create_character(
                 "name": weapon.name,
                 "quantity": 1,
                 "description": weapon.description,
+            }
+        )
+    for background_item in background_row["inventory"]:
+        inventory.append(
+            {
+                "id": background_item["id"],
+                "name": background_item["name"],
+                "quantity": background_item["quantity"],
+                "description": background_item["description"],
             }
         )
 
