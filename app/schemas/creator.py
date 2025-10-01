@@ -1,9 +1,14 @@
-from typing import List, Literal, Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
-from app.schemas.common import Feature, InventoryItem, Skill
-
-AbilityKey = Literal["str", "dex", "con", "int", "wis", "cha"]
+from app.schemas.common import (
+    Feature,
+    InventoryItem,
+    Skill,
+    AbilityKey,
+    AbilityScores,
+    Spell,
+)
 
 
 class Race(BaseModel):
@@ -44,13 +49,6 @@ class WeaponChoice(BaseModel):
     choices: List[Weapon]
 
 
-class Spell(BaseModel):
-    id: str
-    name: str
-    level: int
-    description: str
-
-
 class SpellChoice(BaseModel):
     id: str
     name: str
@@ -79,3 +77,14 @@ class Background(BaseModel):
     features: Optional[List[Feature]]
     skills: Optional[List[Skill]]
     inventory: Optional[List[InventoryItem]]
+
+
+class CharacterDraft(BaseModel):
+    name: str
+    classId: str
+    raceId: str
+    backgroundId: str
+    skills: List[Skill]
+    weapons: List[Weapon]
+    spells: List[Spell]
+    abilities: AbilityScores

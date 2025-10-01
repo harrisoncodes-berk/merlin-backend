@@ -1,5 +1,18 @@
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, Literal
+from pydantic import BaseModel, Field
+
+
+AbilityKey = Literal["str", "dex", "con", "int", "wis", "cha"]
+SpellLevel = Literal["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+
+class AbilityScores(BaseModel):
+    str: int
+    dex: int
+    con: int
+    int: int
+    wis: int
+    cha: int
 
 
 class Feature(BaseModel):
@@ -14,6 +27,13 @@ class Skill(BaseModel):
     key: str
     proficient: bool
     expertise: Optional[bool] = False
+
+
+class Spell(BaseModel):
+    id: str
+    name: str
+    level: int
+    description: str
 
 
 class InventoryItem(BaseModel):

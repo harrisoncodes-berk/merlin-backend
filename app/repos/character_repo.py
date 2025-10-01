@@ -7,7 +7,7 @@ from app.models.tables import characters
 from app.schemas.character import Character
 
 
-def _row_to_out(row: dict) -> Character:
+def _row_to_character(row: dict) -> Character:
     return Character(
         id=str(row["id"]),
         name=row["name"],
@@ -53,7 +53,7 @@ async def list_characters_for_user(
     )
     res = await session.execute(stmt)
     rows = res.mappings().all()
-    return [_row_to_out(r) for r in rows]
+    return [_row_to_character(r) for r in rows]
 
 
 async def get_character_for_user(
@@ -82,4 +82,4 @@ async def get_character_for_user(
     )
     res = await session.execute(stmt)
     row = res.mappings().first()
-    return _row_to_out(row) if row else None
+    return _row_to_character(row) if row else None
