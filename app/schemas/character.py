@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.schemas.common import (
     Feature,
@@ -20,23 +20,23 @@ class SpellSlots(BaseModel):
 class Spellcasting(BaseModel):
     ability: AbilityKey
     slots: Optional[Dict[SpellLevel, SpellSlots]] = None
-    spells: List[Spell]  # include cantrips with level = 0
+    spells: List[Spell]
     className: Optional[str] = None
 
 
 class Character(BaseModel):
     id: str
-    name: str  # name
-    race: str  # race.name
-    className: str  # class.name
-    background: str  # background.name
-    level: int  # 1
+    name: str
+    race: str
+    className: str
+    background: str
+    level: int
     hpCurrent: int
-    hpMax: int  # class.hit_dice.sides + get_ability_bonus(abilities.constitution)
-    ac: int  # class.ac
-    speed: int  # race.speed
-    abilities: AbilityScores  # abilities
-    skills: List[Skill] = []  # skills
-    features: List[Feature] = []  # race.features + class.features + background.features
-    inventory: List[InventoryItem] = []  # background.inventory
-    spellcasting: Optional[Spellcasting] = None  # create based on class.spell_choices
+    hpMax: int
+    ac: int
+    speed: int
+    abilities: AbilityScores
+    skills: List[Skill] = []
+    features: List[Feature] = []
+    inventory: List[InventoryItem] = []
+    spellcasting: Optional[Spellcasting] = None

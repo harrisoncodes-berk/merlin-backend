@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import characters
+from app.models.character_tables import characters
 from app.schemas.character import Character
 
 

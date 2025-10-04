@@ -1,13 +1,19 @@
-from typing import Optional, AsyncGenerator
+import ssl
+import os
+from typing import Optional, AsyncIterator, AsyncGenerator
+
+from contextlib import asynccontextmanager
+from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-import ssl
-import os
+
 from app.settings import get_settings
+
+metadata = MetaData()
 
 _settings = get_settings()
 
@@ -40,6 +46,16 @@ def get_engine() -> AsyncEngine:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    global _sessionmaker
+    if _sessionmaker is None:
+        get_engine()
+    assert _sessionmaker is not None
+    async with _sessionmaker() as session:
+        yield session
+
+
+@asynccontextmanager
+async def get_session_cm() -> AsyncIterator[AsyncSession]:
     global _sessionmaker
     if _sessionmaker is None:
         get_engine()

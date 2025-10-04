@@ -2,7 +2,8 @@ from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
-from app.models.tables import backgrounds, classes, races, characters
+from app.models.character_tables import characters
+from app.models.creator_tables import backgrounds, classes, races
 from app.schemas.creator import (
     Background,
     Class,
@@ -151,21 +152,18 @@ async def create_character(
 ) -> Character:
     """Create a new character from a character draft."""
 
-    # Get race data
     race_stmt = select(races).where(races.c.id == character_draft.raceId)
     race_result = await session.execute(race_stmt)
     race_row = race_result.mappings().first()
     if not race_row:
         raise NoResultFound(f"Race with id {character_draft.raceId} not found")
 
-    # Get class data
     class_stmt = select(classes).where(classes.c.id == character_draft.classId)
     class_result = await session.execute(class_stmt)
     class_row = class_result.mappings().first()
     if not class_row:
         raise NoResultFound(f"Class with id {character_draft.classId} not found")
 
-    # Get background data
     background_stmt = select(backgrounds).where(
         backgrounds.c.id == character_draft.backgroundId
     )
@@ -176,21 +174,14 @@ async def create_character(
             f"Background with id {character_draft.backgroundId} not found"
         )
 
-    # Calculate derived stats
     con_modifier = (character_draft.abilities.con - 10) // 2
     dex_modifier = (character_draft.abilities.dex - 10) // 2
 
-    # Calculate HP (class hit dice + con modifier)
     hit_dice = class_row["hit_dice"]
     hp_max = hit_dice["sides"] + con_modifier  # Level 1: max roll + con mod
-
-    # Calculate AC (class base AC + dex modifier, max dex bonus typically applies)
     ac = class_row["ac"] + dex_modifier
-
-    # Use race speed
     speed = race_row["speed"]
 
-    # Prepare spellcasting data
     spellcasting_data = None
     if character_draft.spells:
         spellcasting_data = Spellcasting(
@@ -204,7 +195,6 @@ async def create_character(
             spells=character_draft.spells,
         ).model_dump()
 
-    # Prepare inventory (convert weapons to inventory items)
     inventory = []
     for weapon in character_draft.weapons:
         inventory.append(
@@ -225,8 +215,7 @@ async def create_character(
                 "description": background_item.get("description"),
             }
         )
-    # Insert character
-    # Build the base values
+
     values = {
         "id": uuid4(),
         "user_id": user_id,
@@ -247,7 +236,6 @@ async def create_character(
         "inventory": inventory,
     }
 
-    # Only add spellcasting if it's not None
     if spellcasting_data is not None:
         values["spellcasting"] = spellcasting_data
 
@@ -256,8 +244,6 @@ async def create_character(
     result = await session.execute(insert_stmt)
     character_row = result.mappings().first()
 
-    # Commit the transaction
     await session.commit()
 
-    # Convert to Character schema
     return _row_to_character(character_row)
