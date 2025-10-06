@@ -34,3 +34,7 @@ class HistoryResponse(BaseModel):
 class StreamRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=8000)
     clientMessageId: Optional[str] = Field(None, max_length=128)
+
+
+class SendMessageRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=8000)

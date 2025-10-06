@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.character_tables import characters
 from app.models.chat_tables import chat_sessions, chat_messages
-from app.schemas.chat import Session
+from app.schemas.chat import Message, Session
 
 
 class ChatRepo:
@@ -211,6 +211,41 @@ class ChatRepo:
         )
         mid = int((await db_session.execute(stmt)).scalar_one())
         return mid
+
+    async def send_message_return_assistant(
+        self, db_session: AsyncSession, user_id: str, session_id: str, user_text: str
+    ) -> dict:
+        await self.assert_owned_session(db_session, user_id, session_id)
+
+        await self.insert_user_message(db_session, session_id, user_text)
+
+        # TODO: replace with real model inference/generation
+        assistant_text = "The corridor smells of damp stone and old secrets. Footsteps echo ahead."
+
+        assistant_mid = await self.insert_assistant_message(
+            db_session, session_id, assistant_text
+        )
+
+        stmt = (
+            select(
+                chat_messages.c.message_id,
+                chat_messages.c.role,
+                chat_messages.c.content,
+                chat_messages.c.created_at,
+            )
+            .where(
+                chat_messages.c.session_id == session_id,
+                chat_messages.c.message_id == assistant_mid,
+            )
+            .limit(1)
+        )
+        rec = (await db_session.execute(stmt)).first()
+        return Message(
+            messageId=int(rec.message_id),
+            role=rec.role,
+            content=rec.content,
+            createdAt=rec.created_at.isoformat(),
+        )
 
 
 def _session_row_to_out(r) -> Session:

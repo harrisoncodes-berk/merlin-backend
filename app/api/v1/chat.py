@@ -11,6 +11,8 @@ from app.schemas.chat import (
     SessionRequest,
     HistoryResponse,
     StreamRequest,
+    SendMessageRequest,
+    Message,
 )
 from app.repos.chat_repo import ChatRepo
 from app.services.sse import sse_event
@@ -169,3 +171,22 @@ async def cancel(session_id: str, user_id: str = Depends(require_user_id)):
         await job_registry.cancel((user_id, session_id))
     finally:
         return
+
+
+@chat_router.post("/sessions/{session_id}/message", response_model=Message)
+async def send_message(
+    session_id: str,
+    payload: SendMessageRequest,
+    user_id: str = Depends(require_user_id),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    try:
+        msg = await repo.send_message_return_assistant(
+            db_session, user_id, session_id, payload.message
+        )
+        await db_session.commit()
+        return msg
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Session not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
