@@ -22,8 +22,14 @@ chat_role = ENUM(
 chat_sessions = Table(
     "chat_sessions",
     metadata,
-    Column("session_id", UUID(as_uuid=False), primary_key=True),
+    Column("session_id", UUID(as_uuid=True), primary_key=True),
     Column("user_id", UUID(as_uuid=False), nullable=False),
+    Column(
+        "character_id",
+        UUID(as_uuid=False),
+        ForeignKey("public.characters.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
     Column("title", Text, nullable=False),
     Column("settings", JSONB, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),

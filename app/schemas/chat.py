@@ -2,16 +2,20 @@ from typing import Literal, Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 
-class EnsureSessionRequest(BaseModel):
-    title: Optional[str] = Field(None, max_length=120)
-    settings: Dict[str, Any] = Field(default_factory=dict)
-
-
-class EnsureSessionResponse(BaseModel):
+class Session(BaseModel):
     sessionId: str
+    characterId: str
     title: str
     settings: Dict[str, Any]
     createdAt: str
+    updatedAt: str
+    archivedAt: Optional[str] = None
+
+
+class SessionRequest(BaseModel):
+    characterId: str
+    title: Optional[str] = Field(None, max_length=120)
+    settings: Dict[str, Any] = Field(default_factory=dict)
 
 
 class Message(BaseModel):

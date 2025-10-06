@@ -45,7 +45,7 @@ def get_engine() -> AsyncEngine:
     return _engine
 
 
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     global _sessionmaker
     if _sessionmaker is None:
         get_engine()
@@ -55,7 +55,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @asynccontextmanager
-async def get_session_cm() -> AsyncIterator[AsyncSession]:
+async def get_db_session_cm() -> AsyncIterator[AsyncSession]:
     global _sessionmaker
     if _sessionmaker is None:
         get_engine()

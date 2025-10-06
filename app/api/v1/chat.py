@@ -7,36 +7,40 @@ from sqlalchemy.exc import NoResultFound
 
 from app.dependencies.auth import require_user_id
 from app.schemas.chat import (
-    EnsureSessionRequest,
-    EnsureSessionResponse,
+    Session,
+    SessionRequest,
     HistoryResponse,
     StreamRequest,
 )
 from app.repos.chat_repo import ChatRepo
 from app.services.sse import sse_event
 from app.services.job_registry import job_registry
-from app.adapters.db import get_session, get_session_cm
+from app.adapters.db import get_db_session, get_db_session_cm
 
 chat_router = APIRouter(prefix="/chat", tags=["chat"])
 repo = ChatRepo()
 
 
-@chat_router.post("/sessions/ensure", response_model=EnsureSessionResponse)
-async def ensure_session(
-    payload: EnsureSessionRequest,
+@chat_router.get("/sessions/{session_id}", response_model=Session)
+async def session(
+    session_id: str,
     user_id: str = Depends(require_user_id),
-    db_session: AsyncSession = Depends(get_session),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
-    session_row = await repo.ensure_session(
-        db_session, user_id, payload.title, payload.settings or {}
+    return await repo.get_session(db_session, user_id, session_id)
+
+
+@chat_router.post("/sessions/active", response_model=Session)
+async def active_session(
+    payload: SessionRequest,
+    user_id: str = Depends(require_user_id),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    session = await repo.get_or_create_active_session(
+        db_session, user_id, payload.characterId, payload.title, payload.settings or {}
     )
     await db_session.commit()
-    return {
-        "sessionId": session_row["session_id"],
-        "title": session_row["title"],
-        "settings": payload.settings or {},
-        "createdAt": session_row["created_at"],
-    }
+    return session
 
 
 @chat_router.get("/sessions/{session_id}/history", response_model=HistoryResponse)
@@ -45,7 +49,7 @@ async def history(
     after: Optional[int] = None,
     limit: int = 50,
     user_id: str = Depends(require_user_id),
-    db_session: AsyncSession = Depends(get_session),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     try:
         await repo.assert_owned_session(db_session, user_id, session_id)
@@ -81,7 +85,7 @@ async def stream(
     session_id: str,
     req: StreamRequest,
     user_id: str = Depends(require_user_id),
-    db_session: AsyncSession = Depends(get_session),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     try:
         await repo.assert_owned_session(db_session, user_id, session_id)
@@ -116,7 +120,7 @@ async def stream(
             return
 
         try:
-            async with get_session_cm() as db_session:
+            async with get_db_session_cm() as db_session:
                 async with db_session.begin():
                     await repo.insert_user_message(db_session, session_id, req.message)
 
@@ -127,7 +131,7 @@ async def stream(
             yield sse_event("token", {"text": " Footsteps echo ahead."})
 
             assistant_text = "The corridor smells of damp stone and old secrets. Footsteps echo ahead."
-            async with get_session_cm() as db_session:
+            async with get_db_session_cm() as db_session:
                 async with db_session.begin():
                     await repo.insert_assistant_message(
                         db_session, session_id, assistant_text
