@@ -170,15 +170,7 @@ class ChatRepo:
             ).order_by(inner.c.message_id.asc())
             rows = (await db_session.execute(stmt)).all()
 
-        return [
-            {
-                "message_id": r.message_id,
-                "role": r.role,
-                "content": r.content,
-                "created_at": r.created_at.isoformat(),
-            }
-            for r in rows
-        ]
+        return [_message_row_to_out(r) for r in rows]
 
     async def count_total_messages(
         self, db_session: AsyncSession, session_id: str
@@ -220,7 +212,9 @@ class ChatRepo:
         await self.insert_user_message(db_session, session_id, user_text)
 
         # TODO: replace with real model inference/generation
-        assistant_text = "The corridor smells of damp stone and old secrets. Footsteps echo ahead."
+        assistant_text = (
+            "The corridor smells of damp stone and old secrets. Footsteps echo ahead."
+        )
 
         assistant_mid = await self.insert_assistant_message(
             db_session, session_id, assistant_text
@@ -257,4 +251,13 @@ def _session_row_to_out(r) -> Session:
         createdAt=r.created_at.isoformat(),
         updatedAt=r.updated_at.isoformat(),
         archivedAt=r.archived_at.isoformat() if r.archived_at else None,
+    )
+
+
+def _message_row_to_out(r) -> Message:
+    return Message(
+        messageId=int(r.message_id),
+        role=r.role,
+        content=r.content,
+        createdAt=r.created_at.isoformat(),
     )

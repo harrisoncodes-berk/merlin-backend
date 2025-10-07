@@ -64,15 +64,7 @@ async def history(
 
     return {
         "sessionId": session_id,
-        "messages": [
-            {
-                "messageId": m["message_id"],
-                "role": m["role"],
-                "content": m["content"],
-                "createdAt": m["created_at"],
-            }
-            for m in msgs
-        ],
+        "messages": msgs,
         "hasMore": has_more,
     }
 
