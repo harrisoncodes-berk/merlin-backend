@@ -52,13 +52,3 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     assert _sessionmaker is not None
     async with _sessionmaker() as session:
         yield session
-
-
-@asynccontextmanager
-async def get_db_session_cm() -> AsyncIterator[AsyncSession]:
-    global _sessionmaker
-    if _sessionmaker is None:
-        get_engine()
-    assert _sessionmaker is not None
-    async with _sessionmaker() as session:
-        yield session
