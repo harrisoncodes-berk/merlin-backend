@@ -1,4 +1,3 @@
-# app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -31,6 +30,7 @@ def create_app() -> FastAPI:
     app.middleware("http")(trace_middleware)
 
     if settings.llm_provider == "openai" and settings.openai_api_key:
+        print("Using OpenAI")
         app.state.llm = OpenAILLM(
             api_key=settings.openai_api_key,
             model=settings.llm_model,
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
             enable_tools=settings.enable_tool_calling,
         )
     else:
+        print("Using NoOpLLM")
         app.state.llm = NoOpLLM()
 
     app.state.turn_service = TurnService(llm=app.state.llm, repo=ChatRepo())
