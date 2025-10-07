@@ -18,6 +18,24 @@ class Settings(BaseSettings):
     supabase_jwks_url: Optional[str] = None
     supabase_issuer: Optional[str] = None
 
+    llm_provider: str = "openai"
+    openai_api_key: Optional[str] = None
+    llm_model: str = "gpt-4o-reasoning"
+    llm_temperature: float = 0.7
+    llm_max_output_tokens: int = 700
+    llm_streaming: bool = True
+    llm_json_mode: bool = False
+    llm_timeout_seconds: int = 30
+    llm_max_retries: int = 2
+    llm_retry_backoff_ms: int = 250
+    llm_circuit_open_threshold: int = 5
+    llm_circuit_reset_sec: int = 60
+    llm_soft_prompt_budget: int = 6000
+    llm_hard_prompt_budget: int = 8000
+    enable_tool_calling: bool = True
+    enable_rules_rag: bool = False
+    enable_safety_filter: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,

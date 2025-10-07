@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
@@ -71,18 +71,26 @@ async def history(
 
 @chat_router.post("/sessions/{session_id}/message", response_model=Message)
 async def send_message(
+    request: Request,
     session_id: str,
     payload: SendMessageRequest,
     user_id: str = Depends(require_user_id),
     db_session: AsyncSession = Depends(get_db_session),
 ):
     try:
-        msg = await repo.send_message_return_assistant(
-            db_session, user_id, session_id, payload.message
-        )
-        await db_session.commit()
-        return msg
+        await repo.assert_owned_session(db_session, user_id, session_id)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Session not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+    try:
+        service = request.app.state.turn_service
+        msg = await service.handle_turn(
+            db_session=db_session,
+            user_id=user_id,
+            session_id=session_id,
+            user_text=payload.message,
+            trace_id=getattr(request.state, "trace_id", None),
+        )
+        return msg
+    except Exception:
+        raise HTTPException(status_code=500, detail="LLM generation failed")

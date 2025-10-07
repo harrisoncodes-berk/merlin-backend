@@ -182,27 +182,37 @@ class ChatRepo:
         )
         return int((await db_session.execute(stmt)).scalar_one())
 
-    async def insert_user_message(
+    async def insert_user_message_row(
         self, db_session: AsyncSession, session_id: str, content: str
-    ) -> int:
+    ) -> Message:
         stmt = (
             insert(chat_messages)
             .values(session_id=session_id, role="user", content=content)
-            .returning(chat_messages.c.message_id)
+            .returning(
+                chat_messages.c.message_id,
+                chat_messages.c.role,
+                chat_messages.c.content,
+                chat_messages.c.created_at,
+            )
         )
-        mid = int((await db_session.execute(stmt)).scalar_one())
-        return mid
+        r = (await db_session.execute(stmt)).first()
+        return _message_row_to_out(r)
 
-    async def insert_assistant_message(
+    async def insert_assistant_message_row(
         self, db_session: AsyncSession, session_id: str, content: str
-    ) -> int:
+    ) -> Message:
         stmt = (
             insert(chat_messages)
             .values(session_id=session_id, role="assistant", content=content)
-            .returning(chat_messages.c.message_id)
+            .returning(
+                chat_messages.c.message_id,
+                chat_messages.c.role,
+                chat_messages.c.content,
+                chat_messages.c.created_at,
+            )
         )
-        mid = int((await db_session.execute(stmt)).scalar_one())
-        return mid
+        r = (await db_session.execute(stmt)).first()
+        return _message_row_to_out(r)
 
     async def send_message_return_assistant(
         self, db_session: AsyncSession, user_id: str, session_id: str, user_text: str
@@ -234,12 +244,7 @@ class ChatRepo:
             .limit(1)
         )
         rec = (await db_session.execute(stmt)).first()
-        return Message(
-            messageId=int(rec.message_id),
-            role=rec.role,
-            content=rec.content,
-            createdAt=rec.created_at.isoformat(),
-        )
+        return _message_row_to_out(rec)
 
 
 def _session_row_to_out(r) -> Session:
