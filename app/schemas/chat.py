@@ -2,7 +2,7 @@ from typing import Literal, Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 
-class Session(BaseModel):
+class SessionResponse(BaseModel):
     sessionId: str
     characterId: str
     title: str
@@ -18,7 +18,7 @@ class SessionRequest(BaseModel):
     settings: Dict[str, Any] = Field(default_factory=dict)
 
 
-class Message(BaseModel):
+class MessageResponse(BaseModel):
     messageId: int
     role: Literal["system", "user", "assistant", "tool"]
     content: str
@@ -27,7 +27,7 @@ class Message(BaseModel):
 
 class HistoryResponse(BaseModel):
     sessionId: str
-    messages: List[Message]
+    messages: List[MessageResponse]
     hasMore: bool
 
 

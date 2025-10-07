@@ -4,12 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
 from app.dependencies.auth import require_user_id
+from app.mappers.chat_mapper import message_to_response, session_to_response
 from app.schemas.chat import (
-    Session,
-    SessionRequest,
     HistoryResponse,
+    MessageResponse,
     SendMessageRequest,
-    Message,
+    SessionResponse,
+    SessionRequest,
 )
 from app.repos.chat_repo import ChatRepo
 from app.adapters.db import get_db_session
@@ -18,26 +19,27 @@ chat_router = APIRouter(prefix="/chat", tags=["chat"])
 repo = ChatRepo()
 
 
-@chat_router.get("/sessions/{session_id}", response_model=Session)
+@chat_router.get("/sessions/{session_id}", response_model=SessionResponse)
 async def session(
     session_id: str,
     user_id: str = Depends(require_user_id),
     db_session: AsyncSession = Depends(get_db_session),
 ):
-    return await repo.get_session(db_session, user_id, session_id)
+    s = await repo.get_session(db_session, user_id, session_id)
+    return session_to_response(s)
 
 
-@chat_router.post("/sessions/active", response_model=Session)
+@chat_router.post("/sessions/active", response_model=SessionResponse)
 async def active_session(
     payload: SessionRequest,
     user_id: str = Depends(require_user_id),
     db_session: AsyncSession = Depends(get_db_session),
 ):
-    session = await repo.get_or_create_active_session(
+    s = await repo.get_or_create_active_session(
         db_session, user_id, payload.characterId, payload.title, payload.settings or {}
     )
     await db_session.commit()
-    return session
+    return session_to_response(s)
 
 
 @chat_router.get("/sessions/{session_id}/history", response_model=HistoryResponse)
@@ -62,14 +64,14 @@ async def history(
     else:
         has_more = len(msgs) > 0
 
-    return {
-        "sessionId": session_id,
-        "messages": msgs,
-        "hasMore": has_more,
-    }
+    return HistoryResponse(
+        sessionId=session_id,
+        messages=[message_to_response(m) for m in msgs],
+        hasMore=has_more,
+    )
 
 
-@chat_router.post("/sessions/{session_id}/message", response_model=Message)
+@chat_router.post("/sessions/{session_id}/message", response_model=MessageResponse)
 async def send_message(
     request: Request,
     session_id: str,
@@ -91,6 +93,6 @@ async def send_message(
             user_text=payload.message,
             trace_id=getattr(request.state, "trace_id", None),
         )
-        return msg
+        return message_to_response(msg)
     except Exception:
         raise HTTPException(status_code=500, detail="LLM generation failed")
