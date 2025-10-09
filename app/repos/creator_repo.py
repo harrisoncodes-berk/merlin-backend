@@ -1,249 +1,117 @@
+from dataclasses import asdict
 from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
-from app.models.character_tables import characters
-from app.models.creator_tables import backgrounds, classes, races
-from app.schemas.creator import (
+from app.domains.creator import (
     Background,
     Class,
+    CreatorRepo,
     Race,
-    Weapon,
-    WeaponChoice,
-    CharacterDraft,
 )
-from app.schemas.character import Character, Spellcasting, SpellSlots
-from uuid import uuid4
+from app.domains.character import Character
+from app.models.character_tables import characters
+from app.models.creator_tables import backgrounds, classes, races
 
 
-def _race_row_to_out(row: dict) -> Race:
-    return Race(
-        id=str(row["id"]),
-        name=row["name"],
-        description=row["description"],
-        size=row["size"],
-        speed=row["speed"],
-        abilityBonuses=row["ability_bonuses"] or {},
-        features=row["features"] or [],
-    )
+class CreatorRepo(CreatorRepo):
+    def __init__(self, db_session: AsyncSession):
+        self.db_session = db_session
 
+    async def get_race(self, id: str) -> Race:
+        stmt = select(races).where(races.c.id == id)
+        res = await self.db_session.execute(stmt)
+        row = res.mappings().first()
+        if not row:
+            raise NoResultFound(f"Race with id {id} not found")
+        return Race(**row)
 
-async def list_races(session: AsyncSession) -> list[Race]:
-    stmt = select(
-        races.c.id,
-        races.c.name,
-        races.c.description,
-        races.c.size,
-        races.c.speed,
-        races.c.ability_bonuses,
-        races.c.features,
-    )
-    res = await session.execute(stmt)
-    rows = res.mappings().all()
-    return [_race_row_to_out(r) for r in rows]
+    async def get_class(self, id: str) -> Class:
+        stmt = select(classes).where(classes.c.id == id)
+        res = await self.db_session.execute(stmt)
+        row = res.mappings().first()
+        if not row:
+            raise NoResultFound(f"Class with id {id} not found")
+        return Class(**row)
 
+    async def get_background(self, id: str) -> Background:
+        stmt = select(backgrounds).where(backgrounds.c.id == id)
+        res = await self.db_session.execute(stmt)
+        row = res.mappings().first()
+        if not row:
+            raise NoResultFound(f"Background with id {id} not found")
+        return Background(**row)
 
-def _weapon_row_to_out(row: dict) -> Weapon:
-    return Weapon(
-        id=str(row["id"]),
-        name=row["name"],
-        description=row["description"],
-        hitDice=row["hit_dice"],
-    )
+    async def list_races(self) -> list[Race]:
+        stmt = select(
+            races.c.id,
+            races.c.name,
+            races.c.description,
+            races.c.size,
+            races.c.speed,
+            races.c.ability_bonuses,
+            races.c.features,
+        )
+        res = await self.db_session.execute(stmt)
+        rows = res.mappings().all()
+        return [Race(**r) for r in rows]
 
+    async def list_classes(self) -> list[Class]:
+        stmt = select(
+            classes.c.id,
+            classes.c.name,
+            classes.c.description,
+            classes.c.ac,
+            classes.c.hit_dice,
+            classes.c.features,
+            classes.c.skill_choices,
+            classes.c.weapon_choices,
+            classes.c.spell_choices,
+        )
+        res = await self.db_session.execute(stmt)
+        rows = res.mappings().all()
+        return [Class(**r) for r in rows]
 
-def _class_row_to_out(row: dict) -> Class:
-    if row["weapon_choices"]:
-        weapon_choices = []
-        for weapon_choice in row["weapon_choices"]:
-            choices = []
-            for choice in weapon_choice["choices"]:
-                choices.append(_weapon_row_to_out(choice))
-            weapon_choices.append(
-                WeaponChoice(
-                    id=str(weapon_choice["id"]),
-                    name=weapon_choice["name"],
-                    number=weapon_choice["number"],
-                    description=weapon_choice["description"],
-                    choices=choices,
-                )
+    async def list_backgrounds(self) -> list[Background]:
+        stmt = select(
+            backgrounds.c.id,
+            backgrounds.c.class_id,
+            backgrounds.c.name,
+            backgrounds.c.description,
+            backgrounds.c.features,
+            backgrounds.c.skills,
+            backgrounds.c.inventory,
+        )
+        res = await self.db_session.execute(stmt)
+        rows = res.mappings().all()
+        return [Background(**r) for r in rows]
+
+    async def create_character(self, user_id: str, character: Character) -> Character:
+        character_dict = asdict(character)
+        stmt = (
+            insert(characters)
+            .values(**character_dict, user_id=user_id)
+            .returning(
+                characters.c.id,
+                characters.c.name,
+                characters.c.race,
+                characters.c.class_name,
+                characters.c.background,
+                characters.c.level,
+                characters.c.hp_current,
+                characters.c.hp_max,
+                characters.c.ac,
+                characters.c.speed,
+                characters.c.abilities,
+                characters.c.skills,
+                characters.c.features,
+                characters.c.inventory,
+                characters.c.spellcasting,
             )
-    else:
-        weapon_choices = None
-    return Class(
-        id=str(row["id"]),
-        name=row["name"],
-        description=row["description"],
-        ac=row["ac"],
-        hitDice=row["hit_dice"],
-        features=row["features"] or None,
-        skillChoices=row["skill_choices"] or None,
-        weaponChoices=weapon_choices,
-        spellChoices=row["spell_choices"] or None,
-    )
-
-
-async def list_classes(session: AsyncSession) -> list[Class]:
-    stmt = select(
-        classes.c.id,
-        classes.c.name,
-        classes.c.description,
-        classes.c.ac,
-        classes.c.hit_dice,
-        classes.c.features,
-        classes.c.skill_choices,
-        classes.c.weapon_choices,
-        classes.c.spell_choices,
-    )
-    res = await session.execute(stmt)
-    rows = res.mappings().all()
-    return [_class_row_to_out(r) for r in rows]
-
-
-def _background_row_to_out(row: dict) -> Background:
-    return Background(
-        id=str(row["id"]),
-        classId=str(row["class_id"]),
-        name=row["name"],
-        description=row["description"],
-        features=row["features"] or None,
-        skills=row["skills"] or None,
-        inventory=row["inventory"] or None,
-    )
-
-
-async def list_backgrounds(session: AsyncSession) -> list[Background]:
-    stmt = select(
-        backgrounds.c.id,
-        backgrounds.c.class_id,
-        backgrounds.c.name,
-        backgrounds.c.description,
-        backgrounds.c.features,
-        backgrounds.c.skills,
-        backgrounds.c.inventory,
-    )
-    res = await session.execute(stmt)
-    rows = res.mappings().all()
-    return [_background_row_to_out(r) for r in rows]
-
-
-def _row_to_character(row: dict) -> Character:
-    return Character(
-        id=str(row["id"]),
-        name=row["name"],
-        race=row["race"],
-        className=row["class_name"],
-        background=row["background"],
-        level=row["level"],
-        hpCurrent=row["hp_current"],
-        hpMax=row["hp_max"],
-        ac=row["ac"],
-        speed=row["speed"],
-        abilities=row["abilities"] or {},
-        skills=row["skills"] or [],
-        features=row["features"] or [],
-        inventory=row["inventory"] or [],
-        spellcasting=row["spellcasting"],
-    )
-
-
-async def create_character(
-    session: AsyncSession, user_id: str, character_draft: CharacterDraft
-) -> Character:
-    """Create a new character from a character draft."""
-
-    race_stmt = select(races).where(races.c.id == character_draft.raceId)
-    race_result = await session.execute(race_stmt)
-    race_row = race_result.mappings().first()
-    if not race_row:
-        raise NoResultFound(f"Race with id {character_draft.raceId} not found")
-
-    class_stmt = select(classes).where(classes.c.id == character_draft.classId)
-    class_result = await session.execute(class_stmt)
-    class_row = class_result.mappings().first()
-    if not class_row:
-        raise NoResultFound(f"Class with id {character_draft.classId} not found")
-
-    background_stmt = select(backgrounds).where(
-        backgrounds.c.id == character_draft.backgroundId
-    )
-    background_result = await session.execute(background_stmt)
-    background_row = background_result.mappings().first()
-    if not background_row:
-        raise NoResultFound(
-            f"Background with id {character_draft.backgroundId} not found"
         )
+        res = await self.db_session.execute(stmt)
+        character_row = res.mappings().first()
+        if not character_row:
+            raise Exception("Failed to create character")
 
-    con_modifier = (character_draft.abilities.con - 10) // 2
-    dex_modifier = (character_draft.abilities.dex - 10) // 2
-
-    hit_dice = class_row["hit_dice"]
-    hp_max = hit_dice["sides"] + con_modifier  # Level 1: max roll + con mod
-    ac = class_row["ac"] + dex_modifier
-    speed = race_row["speed"]
-
-    spellcasting_data = None
-    if character_draft.spells:
-        spellcasting_data = Spellcasting(
-            ability="int",  # Default to intelligence for now
-            slots={
-                "1": SpellSlots(
-                    max=2,
-                    used=0,
-                ),
-            },
-            spells=character_draft.spells,
-        ).model_dump()
-
-    inventory = []
-    for weapon in character_draft.weapons:
-        inventory.append(
-            {
-                "id": weapon.id,
-                "name": weapon.name,
-                "quantity": 1,  # TODO: Need to add weight for weapons
-                "description": weapon.description,
-            }
-        )
-    for background_item in background_row["inventory"]:
-        inventory.append(
-            {
-                "id": background_item["id"],
-                "name": background_item["name"],
-                "weight": background_item.get("weight", 0),
-                "quantity": background_item.get("quantity", 1),
-                "description": background_item.get("description"),
-            }
-        )
-
-    values = {
-        "id": uuid4(),
-        "user_id": user_id,
-        "name": character_draft.name,
-        "race": race_row["name"],
-        "class_name": class_row["name"],
-        "background": background_row["name"],
-        "level": 1,
-        "hp_current": hp_max,
-        "hp_max": hp_max,
-        "ac": ac,
-        "speed": speed,
-        "abilities": character_draft.abilities.model_dump(),
-        "skills": [skill.model_dump() for skill in character_draft.skills],
-        "features": (race_row["features"] or [])
-        + (class_row["features"] or [])
-        + (background_row["features"] or []),
-        "inventory": inventory,
-    }
-
-    if spellcasting_data is not None:
-        values["spellcasting"] = spellcasting_data
-
-    insert_stmt = insert(characters).values(**values).returning(characters)
-
-    result = await session.execute(insert_stmt)
-    character_row = result.mappings().first()
-
-    await session.commit()
-
-    return _row_to_character(character_row)
+        return Character(**character_row)

@@ -1,42 +1,42 @@
-from typing import List, Optional, Dict
-from pydantic import BaseModel
+from app.schemas.base import APIBase
+from typing import Dict, List, Optional
 
-from app.schemas.common import (
-    Feature,
-    InventoryItem,
-    Skill,
+from app.schemas.character_common import (
     AbilityKey,
+    AbilityScoresOut,
+    FeatureOut,
+    ItemOut,
     SpellLevel,
-    AbilityScores,
-    Spell,
+    SkillOut,
+    SpellOut,
 )
 
 
-class SpellSlots(BaseModel):
+class SpellSlotsOut(APIBase):
     max: int
     used: int
 
 
-class Spellcasting(BaseModel):
+class SpellcastingOut(APIBase):
     ability: AbilityKey
-    slots: Optional[Dict[SpellLevel, SpellSlots]] = None
-    spells: List[Spell]
-    className: Optional[str] = None
+    slots: Optional[Dict[SpellLevel, SpellSlotsOut]] = None
+    spells: List[SpellOut]
+    class_name: Optional[str] = None
 
 
-class Character(BaseModel):
+class CharacterOut(APIBase):
     id: str
     name: str
     race: str
-    className: str
+    class_name: str
     background: str
     level: int
-    hpCurrent: int
-    hpMax: int
+    hp_current: int
+    hp_max: int
     ac: int
     speed: int
-    abilities: AbilityScores
-    skills: List[Skill] = []
-    features: List[Feature] = []
-    inventory: List[InventoryItem] = []
-    spellcasting: Optional[Spellcasting] = None
+    abilities: AbilityScoresOut
+    skills: List[SkillOut] = []
+    features: List[FeatureOut] = []
+    inventory: List[ItemOut] = []
+    spellcasting: Optional[SpellcastingOut] = None

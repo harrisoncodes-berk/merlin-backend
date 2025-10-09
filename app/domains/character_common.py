@@ -1,12 +1,13 @@
+from dataclasses import dataclass
 from typing import Optional, Literal
-from pydantic import BaseModel
 
 
 AbilityKey = Literal["str", "dex", "con", "int", "wis", "cha"]
 SpellLevel = Literal["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
 
-class AbilityScores(BaseModel):
+@dataclass
+class AbilityScores:
     str: int
     dex: int
     con: int
@@ -15,30 +16,34 @@ class AbilityScores(BaseModel):
     cha: int
 
 
-class Feature(BaseModel):
+@dataclass
+class Feature:
     id: str
     name: str
-    description: Optional[str] = None
+    description: str
     uses: Optional[int] = None
-    maxUses: Optional[int] = None
+    max_uses: Optional[int] = None
 
 
-class Skill(BaseModel):
+@dataclass
+class Item:
+    id: str
+    name: str
+    quantity: int
+    weight: float
+    description: str
+
+
+@dataclass
+class Skill:
     key: str
     proficient: bool
     expertise: Optional[bool] = False
 
 
-class Spell(BaseModel):
+@dataclass
+class Spell:
     id: str
     name: str
     level: int
     description: str
-
-
-class InventoryItem(BaseModel):
-    id: str
-    name: str
-    quantity: int
-    weight: Optional[float] = None
-    description: Optional[str] = None

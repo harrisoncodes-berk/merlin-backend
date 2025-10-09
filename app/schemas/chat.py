@@ -1,35 +1,37 @@
 from typing import Literal, Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import APIBase
 
 
-class SessionResponse(BaseModel):
-    sessionId: str
-    characterId: str
-    title: str
-    settings: Dict[str, Any]
-    createdAt: str
-    updatedAt: str
-    archivedAt: Optional[str] = None
-
-
-class SessionRequest(BaseModel):
-    characterId: str
+class SessionIn(APIBase):
+    character_id: str
     title: Optional[str] = Field(None, max_length=120)
     settings: Dict[str, Any] = Field(default_factory=dict)
 
 
-class MessageResponse(BaseModel):
-    messageId: int
+class SessionOut(APIBase):
+    session_id: str
+    character_id: str
+    title: str
+    settings: Dict[str, Any]
+    created_at: str
+    updated_at: str
+    archived_at: Optional[str] = None
+
+
+class MessageOut(APIBase):
+    message_id: int
     role: Literal["system", "user", "assistant", "tool"]
     content: str
     createdAt: str
 
 
-class HistoryResponse(BaseModel):
-    sessionId: str
-    messages: List[MessageResponse]
-    hasMore: bool
+class MessageHistoryOut(APIBase):
+    session_id: str
+    messages: List[MessageOut]
+    has_more: bool
 
 
-class SendMessageRequest(BaseModel):
+class SendMessageIn(APIBase):
     message: str = Field(..., min_length=1, max_length=8000)

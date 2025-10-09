@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, Optional
 
 
+@dataclass
 class Message:
     message_id: int
     role: Literal["system", "user", "assistant", "tool"]
@@ -9,6 +11,7 @@ class Message:
     created_at: datetime
 
 
+@dataclass
 class Session:
     session_id: str
     character_id: str

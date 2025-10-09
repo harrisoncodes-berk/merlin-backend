@@ -9,9 +9,10 @@ from app.domains.chat import Message, Session
 
 
 class ChatRepo:
-    async def assert_owned_session(
-        self, db_session: AsyncSession, user_id: str, session_id: str
-    ) -> None:
+    def __init__(self, db_session: AsyncSession):
+        self.db_session = db_session
+
+    async def assert_owned_session(self, user_id: str, session_id: str) -> None:
         stmt = (
             select(literal_column("1"))
             .select_from(chat_sessions)
@@ -20,13 +21,11 @@ class ChatRepo:
                 chat_sessions.c.user_id == user_id,
             )
         )
-        row = (await db_session.execute(stmt)).first()
+        row = (await self.db_session.execute(stmt)).first()
         if row is None:
             raise NoResultFound("session not found or not owned")
 
-    async def assert_owned_character(
-        self, db_session: AsyncSession, user_id: str, character_id: str
-    ) -> None:
+    async def assert_owned_character(self, user_id: str, character_id: str) -> None:
         stmt = (
             select(literal_column("1"))
             .select_from(characters)
@@ -35,13 +34,11 @@ class ChatRepo:
                 characters.c.user_id == user_id,
             )
         )
-        row = (await db_session.execute(stmt)).first()
+        row = (await self.db_session.execute(stmt)).first()
         if row is None:
             raise NoResultFound("character not found or not owned")
 
-    async def get_session(
-        self, db_session: AsyncSession, user_id: str, session_id: str
-    ) -> Session:
+    async def get_session(self, user_id: str, session_id: str) -> Session:
         stmt = select(
             chat_sessions.c.session_id,
             chat_sessions.c.character_id,
@@ -54,14 +51,13 @@ class ChatRepo:
             chat_sessions.c.user_id == user_id,
             chat_sessions.c.session_id == session_id,
         )
-        rec = (await db_session.execute(stmt)).first()
+        rec = (await self.db_session.execute(stmt)).first()
         if not rec:
             raise NoResultFound("session not found")
         return _row_to_session(rec)
 
     async def create_session(
         self,
-        db_session: AsyncSession,
         user_id: str,
         character_id: str,
         title: Optional[str],
@@ -83,12 +79,11 @@ class ChatRepo:
                 chat_sessions.c.archived_at,
             )
         )
-        rec = (await db_session.execute(stmt)).first()
+        rec = (await self.db_session.execute(stmt)).first()
         return _row_to_session(rec)
 
     async def get_or_create_active_session(
         self,
-        db_session: AsyncSession,
         user_id: str,
         character_id: str,
         title: Optional[str],
@@ -112,23 +107,20 @@ class ChatRepo:
             .order_by(chat_sessions.c.created_at.desc())
             .limit(1)
         )
-        rec = (await db_session.execute(stmt)).first()
+        rec = (await self.db_session.execute(stmt)).first()
         if rec:
             return _row_to_session(rec)
 
         try:
-            return await self.create_session(
-                db_session, user_id, character_id, title, settings
-            )
+            return await self.create_session(user_id, character_id, title, settings)
         except IntegrityError:
-            rec = (await db_session.execute(stmt)).first()
+            rec = (await self.db_session.execute(stmt)).first()
             if rec:
                 return _row_to_session(rec)
             raise
 
     async def list_messages(
         self,
-        db_session: AsyncSession,
         session_id: str,
         after: Optional[int],
         limit: int,
@@ -148,7 +140,7 @@ class ChatRepo:
                 .order_by(chat_messages.c.message_id.asc())
                 .limit(limit)
             )
-            rows = (await db_session.execute(stmt)).all()
+            rows = (await self.db_session.execute(stmt)).all()
         else:
             inner = (
                 select(
@@ -168,23 +160,19 @@ class ChatRepo:
                 inner.c.content,
                 inner.c.created_at,
             ).order_by(inner.c.message_id.asc())
-            rows = (await db_session.execute(stmt)).all()
+            rows = (await self.db_session.execute(stmt)).all()
 
         return [_row_to_message(r) for r in rows]
 
-    async def count_total_messages(
-        self, db_session: AsyncSession, session_id: str
-    ) -> int:
+    async def count_total_messages(self, session_id: str) -> int:
         stmt = (
             select(func.count())
             .select_from(chat_messages)
             .where(chat_messages.c.session_id == session_id)
         )
-        return int((await db_session.execute(stmt)).scalar_one())
+        return int((await self.db_session.execute(stmt)).scalar_one())
 
-    async def insert_user_message_row(
-        self, db_session: AsyncSession, session_id: str, content: str
-    ) -> Message:
+    async def insert_user_message_row(self, session_id: str, content: str) -> Message:
         stmt = (
             insert(chat_messages)
             .values(session_id=session_id, role="user", content=content)
@@ -195,11 +183,11 @@ class ChatRepo:
                 chat_messages.c.created_at,
             )
         )
-        r = (await db_session.execute(stmt)).first()
+        r = (await self.db_session.execute(stmt)).first()
         return _row_to_message(r)
 
     async def insert_assistant_message_row(
-        self, db_session: AsyncSession, session_id: str, content: str
+        self, session_id: str, content: str
     ) -> Message:
         stmt = (
             insert(chat_messages)
@@ -211,40 +199,8 @@ class ChatRepo:
                 chat_messages.c.created_at,
             )
         )
-        r = (await db_session.execute(stmt)).first()
+        r = (await self.db_session.execute(stmt)).first()
         return _row_to_message(r)
-
-    async def send_message_return_assistant(
-        self, db_session: AsyncSession, user_id: str, session_id: str, user_text: str
-    ) -> dict:
-        await self.assert_owned_session(db_session, user_id, session_id)
-
-        await self.insert_user_message(db_session, session_id, user_text)
-
-        # TODO: replace with real model inference/generation
-        assistant_text = (
-            "The corridor smells of damp stone and old secrets. Footsteps echo ahead."
-        )
-
-        assistant_mid = await self.insert_assistant_message(
-            db_session, session_id, assistant_text
-        )
-
-        stmt = (
-            select(
-                chat_messages.c.message_id,
-                chat_messages.c.role,
-                chat_messages.c.content,
-                chat_messages.c.created_at,
-            )
-            .where(
-                chat_messages.c.session_id == session_id,
-                chat_messages.c.message_id == assistant_mid,
-            )
-            .limit(1)
-        )
-        rec = (await db_session.execute(stmt)).first()
-        return _row_to_message(rec)
 
 
 def _row_to_session(r) -> Session:

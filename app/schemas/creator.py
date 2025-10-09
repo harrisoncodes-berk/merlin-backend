@@ -1,90 +1,75 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from app.schemas.base import APIBase
 
-from app.schemas.common import (
-    Feature,
-    InventoryItem,
-    Skill,
+from app.schemas.character_common import (
     AbilityKey,
-    AbilityScores,
-    Spell,
+    AbilityScoresOut,
+    FeatureOut,
+    ItemOut,
+    SkillOut,
+    SpellOut,
 )
 
 
-class Race(BaseModel):
+class RaceOut(APIBase):
     id: str
     name: str
     description: str
     size: str
     speed: int
-    abilityBonuses: dict[AbilityKey, int]
-    features: List[Feature] = []
+    ability_bonuses: dict[AbilityKey, int]
+    features: List[FeatureOut] = []
 
 
-class SkillChoice(BaseModel):
+class SkillChoiceOut(APIBase):
     proficiencies: int
     expertise: Optional[int] = None
     description: str
     skills: List[str] = []
 
 
-class HitDice(BaseModel):
+class HitDiceOut(APIBase):
     name: str
     rolls: int
     sides: int
 
 
-class Weapon(BaseModel):
-    id: str
-    name: str
-    description: str
-    hitDice: HitDice
-
-
-class WeaponChoice(BaseModel):
+class ChoiceOut(APIBase):
     id: str
     name: str
     number: int
     description: str
-    choices: List[Weapon]
+    choices: List[ItemOut] | List[SpellOut]
 
 
-class SpellChoice(BaseModel):
-    id: str
-    name: str
-    number: int
-    description: str
-    choices: List[Spell]
-
-
-class Class(BaseModel):
+class ClassOut(APIBase):
     id: str
     name: str
     description: str
     ac: int
-    hitDice: HitDice
-    features: Optional[List[Feature]]
-    skillChoices: Optional[SkillChoice]
-    weaponChoices: Optional[List[WeaponChoice]]
-    spellChoices: Optional[List[SpellChoice]]
+    hit_dice: HitDiceOut
+    features: Optional[List[FeatureOut]]
+    skill_choices: Optional[SkillChoiceOut]
+    weapon_choices: Optional[List[ChoiceOut]]
+    spell_choices: Optional[List[ChoiceOut]]
 
 
-class Background(BaseModel):
+class BackgroundOut(APIBase):
     id: str
-    classId: str
+    class_id: str
     name: str
     description: str
-    features: Optional[List[Feature]]
-    skills: Optional[List[Skill]]
-    inventory: Optional[List[InventoryItem]]
+    features: Optional[List[FeatureOut]]
+    skills: Optional[List[SkillOut]]
+    inventory: Optional[List[ItemOut]]
 
 
-class CharacterDraft(BaseModel):
+class CreateCharacterIn(APIBase):
     name: str
-    classId: str
-    raceId: str
-    backgroundId: str
-    skills: List[Skill]
-    weapons: List[Weapon]
-    spells: List[Spell]
-    abilities: AbilityScores
+    class_id: str
+    race_id: str
+    background_id: str
+    skills: List[SkillOut]
+    weapons: List[ItemOut]
+    spells: List[SpellOut]
+    abilities: AbilityScoresOut

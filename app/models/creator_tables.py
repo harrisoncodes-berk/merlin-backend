@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, String, MetaData
+from sqlalchemy import Table, Column, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy import TIMESTAMP, text
 
