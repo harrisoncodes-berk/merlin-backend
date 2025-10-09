@@ -6,7 +6,6 @@ from sqlalchemy.exc import NoResultFound
 from app.domains.creator import (
     Background,
     Class,
-    CreatorRepo,
     Race,
 )
 from app.domains.character import Character
@@ -14,7 +13,7 @@ from app.models.character_tables import characters
 from app.models.creator_tables import backgrounds, classes, races
 
 
-class CreatorRepo(CreatorRepo):
+class CreatorRepo():
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
