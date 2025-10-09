@@ -11,8 +11,6 @@ from app.api.v1.chat import chat_router
 from app.services.observability.trace import trace_middleware
 from app.adapters.llm.base import NoOpLLM
 from app.adapters.llm.openai_adapter import OpenAILLM
-from app.services.chat.turn_service import TurnService
-from app.repos.chat_repo import ChatRepo
 
 
 def create_app() -> FastAPI:
@@ -42,8 +40,6 @@ def create_app() -> FastAPI:
     else:
         print("Using NoOpLLM")
         app.state.llm = NoOpLLM()
-
-    app.state.turn_service = TurnService(llm=app.state.llm, repo=ChatRepo())
 
     app.include_router(health_router, prefix=settings.api_v1_prefix)
     app.include_router(auth_router, prefix=settings.api_v1_prefix)

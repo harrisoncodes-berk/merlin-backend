@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
+from app.adapters.llm.base import LLMClient
 from app.adapters.db import get_db_session
 from app.dependencies.auth import require_user_id
 from app.schemas.chat import (
@@ -13,14 +14,25 @@ from app.schemas.chat import (
     SessionIn,
 )
 from app.repos.chat_repo import ChatRepo
+from app.services.chat.turn_service import TurnService
 
 chat_router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+def get_llm(request: Request) -> LLMClient:
+    return request.app.state.llm
 
 
 def get_chat_repo(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> ChatRepo:
     return ChatRepo(db_session)
+
+
+def get_turn_service(
+    llm: LLMClient = Depends(get_llm), chat_repo: ChatRepo = Depends(get_chat_repo)
+) -> TurnService:
+    return TurnService(llm=llm, repo=chat_repo)
 
 
 @chat_router.get("/sessions/{session_id}", response_model=SessionOut)
@@ -44,6 +56,7 @@ async def active_session(
     )
     await chat_repo.db_session.commit()
     return SessionOut.model_validate(s)
+
 
 # TODO: Move logic to service
 @chat_router.get("/sessions/{session_id}/history", response_model=MessageHistoryOut)
@@ -84,6 +97,7 @@ async def send_message(
     payload: SendMessageIn,
     user_id: str = Depends(require_user_id),
     chat_repo: ChatRepo = Depends(get_chat_repo),
+    turn_service: TurnService = Depends(get_turn_service),
 ):
     try:
         await chat_repo.assert_owned_session(user_id, session_id)
@@ -91,8 +105,7 @@ async def send_message(
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
-        service = request.app.state.turn_service
-        msg = await service.handle_turn(
+        msg = await turn_service.handle_turn(
             db_session=chat_repo.db_session,
             user_id=user_id,
             session_id=session_id,

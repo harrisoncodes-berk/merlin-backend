@@ -1,11 +1,11 @@
 from uuid import uuid4
 
 from app.domains.character import Character, Spellcasting, SpellSlots
-from app.domains.creator import CreateCharacterCommand, CreatorRepo
+from app.domains.creator import CreateCharacterCommand, CreatorRepoProtocol
 
 
 class CreateCharacterService:
-    def __init__(self, creator_repo: CreatorRepo):
+    def __init__(self, creator_repo: CreatorRepoProtocol):
         self.creator_repo = creator_repo
 
     async def create_character(
