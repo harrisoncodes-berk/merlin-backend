@@ -35,7 +35,7 @@ class CharacterRepo:
         )
         res = await self.db_session.execute(stmt)
         rows = res.mappings().all()
-        return [Character(**r) for r in rows]
+        return [_row_to_character(r) for r in rows]
 
     async def get_character_for_user(
         self, user_id: str, id: str
@@ -63,4 +63,23 @@ class CharacterRepo:
         )
         res = await self.db_session.execute(stmt)
         row = res.mappings().first()
-        return Character(**row) if row else None
+        return _row_to_character(row) if row else None
+
+def _row_to_character(row: dict) -> Character:
+    return Character(
+        id=str(row["id"]),
+        name=row["name"],
+        race=row["race"],
+        class_name=row["class_name"],
+        background=row["background"],
+        level=row["level"],
+        hp_current=row["hp_current"],
+        hp_max=row["hp_max"],
+        ac=row["ac"],
+        speed=row["speed"],
+        abilities=row["abilities"],
+        skills=row["skills"],
+        features=row["features"],
+        inventory=row["inventory"],
+        spellcasting=row["spellcasting"],
+    )

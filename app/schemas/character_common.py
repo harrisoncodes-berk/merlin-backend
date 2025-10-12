@@ -23,12 +23,19 @@ class FeatureOut(APIBase):
     max_uses: Optional[int] = None
 
 
+class HitDiceOut(APIBase):
+    name: str
+    rolls: int
+    sides: int
+
+
 class ItemOut(APIBase):
     id: str
     name: str
     quantity: int
     weight: float
     description: str
+    hit_dice: Optional[int] = None
 
 
 class SkillOut(APIBase):

@@ -23,7 +23,7 @@ class CreatorRepo():
         row = res.mappings().first()
         if not row:
             raise NoResultFound(f"Race with id {id} not found")
-        return Race(**row)
+        return _row_to_race(row)
 
     async def get_class(self, id: str) -> Class:
         stmt = select(classes).where(classes.c.id == id)
@@ -31,7 +31,7 @@ class CreatorRepo():
         row = res.mappings().first()
         if not row:
             raise NoResultFound(f"Class with id {id} not found")
-        return Class(**row)
+        return _row_to_class(row)
 
     async def get_background(self, id: str) -> Background:
         stmt = select(backgrounds).where(backgrounds.c.id == id)
@@ -39,7 +39,7 @@ class CreatorRepo():
         row = res.mappings().first()
         if not row:
             raise NoResultFound(f"Background with id {id} not found")
-        return Background(**row)
+        return _row_to_background(row)
 
     async def list_races(self) -> list[Race]:
         stmt = select(
@@ -53,7 +53,7 @@ class CreatorRepo():
         )
         res = await self.db_session.execute(stmt)
         rows = res.mappings().all()
-        return [Race(**r) for r in rows]
+        return [_row_to_race(r) for r in rows]
 
     async def list_classes(self) -> list[Class]:
         stmt = select(
@@ -69,7 +69,7 @@ class CreatorRepo():
         )
         res = await self.db_session.execute(stmt)
         rows = res.mappings().all()
-        return [Class(**r) for r in rows]
+        return [_row_to_class(r) for r in rows]
 
     async def list_backgrounds(self) -> list[Background]:
         stmt = select(
@@ -83,7 +83,7 @@ class CreatorRepo():
         )
         res = await self.db_session.execute(stmt)
         rows = res.mappings().all()
-        return [Background(**r) for r in rows]
+        return [_row_to_background(r) for r in rows]
 
     async def create_character(self, user_id: str, character: Character) -> Character:
         character_dict = asdict(character)
@@ -113,4 +113,58 @@ class CreatorRepo():
         if not character_row:
             raise Exception("Failed to create character")
 
-        return Character(**character_row)
+        return _row_to_character(character_row)
+
+def _row_to_race(row: dict) -> Race:
+    return Race(
+        id=str(row["id"]),
+        name=row["name"],
+        description=row["description"],
+        size=row["size"],
+        speed=row["speed"],
+        ability_bonuses=row["ability_bonuses"],
+        features=row["features"],
+    )
+
+def _row_to_class(row: dict) -> Class:
+    return Class(
+        id=str(row["id"]),
+        name=row["name"],
+        description=row["description"],
+        ac=row["ac"],
+        hit_dice=row["hit_dice"],
+        features=row["features"],
+        skill_choices=row["skill_choices"],
+        weapon_choices=row["weapon_choices"],
+        spell_choices=row["spell_choices"],
+    )
+
+def _row_to_background(row: dict) -> Background:
+    return Background(
+        id=str(row["id"]),
+        class_id=str(row["class_id"]),
+        name=row["name"],
+        description=row["description"],
+        features=row["features"],
+        skills=row["skills"],
+        inventory=row["inventory"],
+    )
+
+def _row_to_character(row: dict) -> Character:
+    return Character(
+        id=str(row["id"]),
+        name=row["name"],
+        race=row["race"],
+        class_name=row["class_name"],
+        background=row["background"],
+        level=row["level"],
+        hp_current=row["hp_current"],
+        hp_max=row["hp_max"],
+        ac=row["ac"],
+        speed=row["speed"],
+        abilities=row["abilities"],
+        skills=row["skills"],
+        features=row["features"],
+        inventory=row["inventory"],
+        spellcasting=row["spellcasting"],
+    )

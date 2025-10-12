@@ -5,6 +5,7 @@ from app.schemas.character_common import (
     AbilityKey,
     AbilityScoresOut,
     FeatureOut,
+    HitDiceOut,
     ItemOut,
     SkillOut,
     SpellOut,
@@ -26,12 +27,6 @@ class SkillChoiceOut(APIBase):
     expertise: Optional[int] = None
     description: str
     skills: List[str] = []
-
-
-class HitDiceOut(APIBase):
-    name: str
-    rolls: int
-    sides: int
 
 
 class ChoiceOut(APIBase):
