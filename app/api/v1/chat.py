@@ -52,7 +52,7 @@ async def active_session(
     chat_repo: ChatRepo = Depends(get_chat_repo),
 ):
     s = await chat_repo.get_or_create_active_session(
-        user_id, payload.characterId, payload.title, payload.settings or {}
+        user_id, payload.character_id, payload.title, payload.settings or {}
     )
     await chat_repo.db_session.commit()
     return SessionOut.model_validate(s)

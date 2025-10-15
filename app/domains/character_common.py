@@ -26,12 +26,20 @@ class Feature:
 
 
 @dataclass
+class HitDice:
+    name: str
+    rolls: int
+    sides: int
+
+
+@dataclass
 class Item:
     id: str
     name: str
     quantity: int
     weight: float
     description: str
+    hit_dice: Optional[int] = None
 
 
 @dataclass

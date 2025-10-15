@@ -20,7 +20,7 @@ class CreateCharacterService:
         character_background = await self.creator_repo.get_background(
             create_character_command.background_id
         )
-
+    
         con_modifier = (create_character_command.abilities.con - 10) // 2
         dex_modifier = (create_character_command.abilities.dex - 10) // 2
 
@@ -28,6 +28,7 @@ class CreateCharacterService:
         hp_max = hit_dice.sides + con_modifier
         ac = character_class.ac + dex_modifier
         speed = character_race.speed
+
 
         spellcasting_data = None
         if create_character_command.spells:
@@ -53,6 +54,7 @@ class CreateCharacterService:
                     "description": weapon.description,
                 }
             )
+        print('background inventory', character_background.inventory)
         for background_item in character_background.inventory:
             inventory.append(
                 {
@@ -63,7 +65,7 @@ class CreateCharacterService:
                     "description": background_item.description,
                 }
             )
-
+        print('inventory created')
         character = Character(
             id=str(uuid4()),
             name=create_character_command.name,
@@ -84,9 +86,10 @@ class CreateCharacterService:
         )
         if spellcasting_data is not None:
             character.spellcasting = spellcasting_data
-
+        print('character created')
         created_character = await self.creator_repo.create_character(user_id, character)
 
         await self.creator_repo.db_session.commit()
+        print('commit completed')
 
         return created_character

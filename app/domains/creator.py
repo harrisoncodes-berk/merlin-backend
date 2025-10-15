@@ -8,6 +8,7 @@ from app.domains.character_common import (
     AbilityKey,
     AbilityScores,
     Feature,
+    HitDice,
     Item,
     Skill,
     Spell,
@@ -31,13 +32,6 @@ class SkillChoice:
     description: str
     skills: List[str] = field(default_factory=list)
     expertise: Optional[int] = None
-
-
-@dataclass
-class HitDice:
-    name: str
-    rolls: int
-    sides: int
 
 
 @dataclass
@@ -87,6 +81,7 @@ class CreateCharacterCommand:
 
 class CreatorRepoProtocol(Protocol):
     db_session: AsyncSession
+
     async def get_race(self, race_id: str) -> Race: ...
     async def get_class(self, class_id: str) -> Class: ...
     async def get_background(self, background_id: str) -> Background: ...

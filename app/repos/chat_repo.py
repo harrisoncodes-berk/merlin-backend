@@ -209,9 +209,9 @@ def _row_to_session(r) -> Session:
         character_id=str(r.character_id),
         title=r.title,
         settings=r.settings or {},
-        created_at=r.created_at,
-        updated_at=r.updated_at,
-        archived_at=r.archived_at,
+        created_at=r.created_at.isoformat(),
+        updated_at=r.updated_at.isoformat(),
+        archived_at=r.archived_at.isoformat() if r.archived_at else None,
     )
 
 
@@ -220,5 +220,5 @@ def _row_to_message(r) -> Message:
         messageId=int(r.message_id),
         role=r.role,
         content=r.content,
-        createdAt=r.created_at.isoformat(),
+        created_at=r.created_at.isoformat(),
     )

@@ -35,7 +35,7 @@ class ItemOut(APIBase):
     quantity: int
     weight: float
     description: str
-    hit_dice: Optional[int] = None
+    hit_dice: Optional[HitDiceOut] = None
 
 
 class SkillOut(APIBase):

@@ -24,7 +24,7 @@ class MessageOut(APIBase):
     message_id: int
     role: Literal["system", "user", "assistant", "tool"]
     content: str
-    createdAt: str
+    created_at: str
 
 
 class MessageHistoryOut(APIBase):

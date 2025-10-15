@@ -9,6 +9,7 @@ from app.domains.creator import (
     Race,
 )
 from app.domains.character import Character
+from app.domains.character_common import HitDice, Item
 from app.models.character_tables import characters
 from app.models.creator_tables import backgrounds, classes, races
 
@@ -132,11 +133,25 @@ def _row_to_class(row: dict) -> Class:
         name=row["name"],
         description=row["description"],
         ac=row["ac"],
-        hit_dice=row["hit_dice"],
+        hit_dice=HitDice(
+            name=row["hit_dice"]["name"],
+            rolls=row["hit_dice"]["rolls"],
+            sides=row["hit_dice"]["sides"],
+        ),
         features=row["features"],
         skill_choices=row["skill_choices"],
         weapon_choices=row["weapon_choices"],
         spell_choices=row["spell_choices"],
+    )
+
+def _inventory_to_item(inventory: list[dict]) -> Item:
+    return Item(
+        id=inventory["id"],
+        name=inventory["name"],
+        weight=inventory["weight"],
+        quantity=inventory["quantity"],
+        description=inventory["description"],
+        hit_dice=inventory.get("hit_dice", None),
     )
 
 def _row_to_background(row: dict) -> Background:
@@ -147,7 +162,7 @@ def _row_to_background(row: dict) -> Background:
         description=row["description"],
         features=row["features"],
         skills=row["skills"],
-        inventory=row["inventory"],
+        inventory=[_inventory_to_item(item) for item in row["inventory"]],
     )
 
 def _row_to_character(row: dict) -> Character:
