@@ -59,9 +59,6 @@ class TurnService:
             hard_limit=self.settings.llm_hard_prompt_budget,
         )
 
-        print('pruned stack', pruned_stack)
-        print('budget meta', budget_meta)
-
         if self.circuit.is_open():
             cooldown = self.circuit.remaining_cooldown()
             assistant_text = (

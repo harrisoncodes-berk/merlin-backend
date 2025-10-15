@@ -54,7 +54,6 @@ class CreateCharacterService:
                     "description": weapon.description,
                 }
             )
-        print('background inventory', character_background.inventory)
         for background_item in character_background.inventory:
             inventory.append(
                 {
@@ -65,7 +64,7 @@ class CreateCharacterService:
                     "description": background_item.description,
                 }
             )
-        print('inventory created')
+
         character = Character(
             id=str(uuid4()),
             name=create_character_command.name,
@@ -86,10 +85,9 @@ class CreateCharacterService:
         )
         if spellcasting_data is not None:
             character.spellcasting = spellcasting_data
-        print('character created')
+
         created_character = await self.creator_repo.create_character(user_id, character)
 
         await self.creator_repo.db_session.commit()
-        print('commit completed')
 
         return created_character
