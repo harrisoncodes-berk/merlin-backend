@@ -106,12 +106,12 @@ async def send_message(
 
     try:
         msg = await turn_service.handle_turn(
-            db_session=chat_repo.db_session,
             user_id=user_id,
             session_id=session_id,
             user_text=payload.message,
             trace_id=getattr(request.state, "trace_id", None),
         )
+        print('msg', msg)
         return MessageOut.model_validate(msg)
     except Exception:
         raise HTTPException(status_code=500, detail="LLM generation failed")

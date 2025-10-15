@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.llm.base import LLMClient
 from app.adapters.llm.types import PromptPart, PromptStack
@@ -32,16 +31,15 @@ class TurnService:
     async def handle_turn(
         self,
         *,
-        db_session: AsyncSession,
         user_id: str,
         session_id: str,
         user_text: str,
         trace_id: Optional[str] = None,
     ):
-        _ = await self.repo.insert_user_message_row(db_session, session_id, user_text)
+        _ = await self.repo.insert_user_message_row(session_id, user_text)
 
         last_msgs = await self.repo.list_messages(
-            db_session, session_id, after=None, limit=10
+            session_id, after=None, limit=10
         )
         recent_parts: List[PromptPart] = [
             PromptPart(role=m.role, content=m.content) for m in last_msgs
@@ -61,6 +59,9 @@ class TurnService:
             hard_limit=self.settings.llm_hard_prompt_budget,
         )
 
+        print('pruned stack', pruned_stack)
+        print('budget meta', budget_meta)
+
         if self.circuit.is_open():
             cooldown = self.circuit.remaining_cooldown()
             assistant_text = (
@@ -68,9 +69,9 @@ class TurnService:
                 "The corridor smells of damp stone and old secrets. Footsteps echo ahead."
             )
             msg = await self.repo.insert_assistant_message_row(
-                db_session, session_id, assistant_text
+                session_id, assistant_text
             )
-            await db_session.commit()
+            await self.repo.db_session.commit()
             log_event(
                 "llm.call.end",
                 trace_id=trace_id,
@@ -112,9 +113,9 @@ class TurnService:
             )
             assistant_text = result.text
             msg = await self.repo.insert_assistant_message_row(
-                db_session, session_id, assistant_text
+                session_id, assistant_text
             )
-            await db_session.commit()
+            await self.repo.db_session.commit()
 
             log_event(
                 "llm.call.end",

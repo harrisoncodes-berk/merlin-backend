@@ -217,7 +217,7 @@ def _row_to_session(r) -> Session:
 
 def _row_to_message(r) -> Message:
     return Message(
-        messageId=int(r.message_id),
+        message_id=int(r.message_id),
         role=r.role,
         content=r.content,
         created_at=r.created_at.isoformat(),
