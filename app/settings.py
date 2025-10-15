@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     supabase_jwks_url: Optional[str] = None
     supabase_issuer: Optional[str] = None
 
-    llm_provider: str = "noop"
+    llm_provider: str = "openai"
     openai_api_key: Optional[str] = None
-    llm_model: str = "gpt-4o-reasoning"
+    llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.7
     llm_max_output_tokens: int = 700
     llm_streaming: bool = True

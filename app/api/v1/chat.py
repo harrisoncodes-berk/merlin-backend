@@ -113,5 +113,6 @@ async def send_message(
         )
         print('msg', msg)
         return MessageOut.model_validate(msg)
-    except Exception:
-        raise HTTPException(status_code=500, detail="LLM generation failed")
+    except Exception as e:
+        print('exception', e)
+        raise HTTPException(status_code=500, detail=f"LLM generation failed: {type(e).__name__}: {e}")
