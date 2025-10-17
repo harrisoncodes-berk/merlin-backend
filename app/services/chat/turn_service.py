@@ -38,9 +38,7 @@ class TurnService:
     ):
         _ = await self.repo.insert_user_message_row(session_id, user_text)
 
-        last_msgs = await self.repo.list_messages(
-            session_id, after=None, limit=10
-        )
+        last_msgs = await self.repo.list_messages(session_id, after=None, limit=10)
         recent_parts: List[PromptPart] = [
             PromptPart(role=m.role, content=m.content) for m in last_msgs
         ]
@@ -61,10 +59,7 @@ class TurnService:
 
         if self.circuit.is_open():
             cooldown = self.circuit.remaining_cooldown()
-            assistant_text = (
-                f"The DM is catching their breath (cooldown {cooldown}s). "
-                "The corridor smells of damp stone and old secrets. Footsteps echo ahead."
-            )
+            assistant_text = f"The DM is catching their breath (cooldown {cooldown}s)."
             msg = await self.repo.insert_assistant_message_row(
                 session_id, assistant_text
             )

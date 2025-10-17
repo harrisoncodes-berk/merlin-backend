@@ -1,4 +1,3 @@
-# tests/unit/services/character/test_create_character_service.py
 import pytest
 
 from app.domains.character import Character, Spellcasting
