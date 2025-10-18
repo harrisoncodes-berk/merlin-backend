@@ -13,7 +13,9 @@ from app.schemas.chat import (
     SessionOut,
     SessionIn,
 )
+from app.repos.adventure_repo import AdventureRepo
 from app.repos.chat_repo import ChatRepo
+from app.services.chat.session_service import SessionService
 from app.services.chat.turn_service import TurnService
 
 chat_router = APIRouter(prefix="/chat", tags=["chat"])
@@ -23,10 +25,23 @@ def get_llm(request: Request) -> LLMClient:
     return request.app.state.llm
 
 
+def get_adventure_repo(
+    db_session: AsyncSession = Depends(get_db_session),
+) -> AdventureRepo:
+    return AdventureRepo(db_session)
+
+
 def get_chat_repo(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> ChatRepo:
     return ChatRepo(db_session)
+
+
+def get_session_service(
+    adventure_repo: AdventureRepo = Depends(get_adventure_repo),
+    chat_repo: ChatRepo = Depends(get_chat_repo),
+) -> SessionService:
+    return SessionService(adventure_repo, chat_repo)
 
 
 def get_turn_service(
@@ -49,12 +64,9 @@ async def session(
 async def active_session(
     payload: SessionIn,
     user_id: str = Depends(require_user_id),
-    chat_repo: ChatRepo = Depends(get_chat_repo),
+    session_service: SessionService = Depends(get_session_service),
 ):
-    s = await chat_repo.get_or_create_active_session(
-        user_id, payload.character_id, payload.title, payload.settings or {}
-    )
-    await chat_repo.db_session.commit()
+    s = await session_service.get_or_create_active_session(user_id, payload.character_id)
     return SessionOut.model_validate(s)
 
 
@@ -111,8 +123,8 @@ async def send_message(
             user_text=payload.message,
             trace_id=getattr(request.state, "trace_id", None),
         )
-        print('msg', msg)
         return MessageOut.model_validate(msg)
     except Exception as e:
-        print('exception', e)
-        raise HTTPException(status_code=500, detail=f"LLM generation failed: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"LLM generation failed: {type(e).__name__}: {e}"
+        )

@@ -1,11 +1,12 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from sqlalchemy import select, insert, func, literal_column
-from sqlalchemy.exc import NoResultFound, IntegrityError
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.character_tables import characters
 from app.models.chat_tables import chat_sessions, chat_messages
 from app.domains.chat import Message, Session
+from app.domains.adventures import AdventureStatus
 
 
 class ChatRepo:
@@ -38,12 +39,13 @@ class ChatRepo:
         if row is None:
             raise NoResultFound("character not found or not owned")
 
-    async def get_session(self, user_id: str, session_id: str) -> Session:
+    async def get_session(self, user_id: str, session_id: str) -> Optional[Session]:
         stmt = select(
             chat_sessions.c.session_id,
             chat_sessions.c.character_id,
-            chat_sessions.c.title,
-            chat_sessions.c.settings,
+            chat_sessions.c.adventure_title,
+            chat_sessions.c.story_brief,
+            chat_sessions.c.status,
             chat_sessions.c.created_at,
             chat_sessions.c.updated_at,
             chat_sessions.c.archived_at,
@@ -56,24 +58,47 @@ class ChatRepo:
             raise NoResultFound("session not found")
         return _row_to_session(rec)
 
+    async def get_session_for_character(
+        self, user_id: str, character_id: str
+    ) -> Optional[Session]:
+        stmt = select(
+            chat_sessions.c.session_id,
+            chat_sessions.c.character_id,
+            chat_sessions.c.adventure_title,
+            chat_sessions.c.story_brief,
+            chat_sessions.c.status,
+        ).where(
+            chat_sessions.c.user_id == user_id,
+            chat_sessions.c.character_id == character_id,
+        )
+        rec = (await self.db_session.execute(stmt)).first()
+        if not rec:
+            return None
+        return _row_to_session(rec)
+
     async def create_session(
         self,
         user_id: str,
         character_id: str,
-        title: Optional[str],
-        settings: Dict[str, Any],
+        adventure_title: str,
+        story_brief: str,
+        status: AdventureStatus,
     ) -> Session:
-        t = (title or "New Adventure").strip() or "New Adventure"
         stmt = (
             insert(chat_sessions)
             .values(
-                user_id=user_id, character_id=character_id, title=t, settings=settings
+                user_id=user_id,
+                character_id=character_id,
+                adventure_title=adventure_title,
+                story_brief=story_brief,
+                status=status,
             )
             .returning(
                 chat_sessions.c.session_id,
                 chat_sessions.c.character_id,
-                chat_sessions.c.title,
-                chat_sessions.c.settings,
+                chat_sessions.c.adventure_title,
+                chat_sessions.c.story_brief,
+                chat_sessions.c.status,
                 chat_sessions.c.created_at,
                 chat_sessions.c.updated_at,
                 chat_sessions.c.archived_at,
@@ -81,43 +106,6 @@ class ChatRepo:
         )
         rec = (await self.db_session.execute(stmt)).first()
         return _row_to_session(rec)
-
-    async def get_or_create_active_session(
-        self,
-        user_id: str,
-        character_id: str,
-        title: Optional[str],
-        settings: Dict[str, Any],
-    ) -> Session:
-        stmt = (
-            select(
-                chat_sessions.c.session_id,
-                chat_sessions.c.character_id,
-                chat_sessions.c.title,
-                chat_sessions.c.settings,
-                chat_sessions.c.created_at,
-                chat_sessions.c.updated_at,
-                chat_sessions.c.archived_at,
-            )
-            .where(
-                chat_sessions.c.user_id == user_id,
-                chat_sessions.c.character_id == character_id,
-                chat_sessions.c.archived_at.is_(None),
-            )
-            .order_by(chat_sessions.c.created_at.desc())
-            .limit(1)
-        )
-        rec = (await self.db_session.execute(stmt)).first()
-        if rec:
-            return _row_to_session(rec)
-
-        try:
-            return await self.create_session(user_id, character_id, title, settings)
-        except IntegrityError:
-            rec = (await self.db_session.execute(stmt)).first()
-            if rec:
-                return _row_to_session(rec)
-            raise
 
     async def list_messages(
         self,
@@ -204,11 +192,13 @@ class ChatRepo:
 
 
 def _row_to_session(r) -> Session:
+    print(r)
     return Session(
         session_id=str(r.session_id),
         character_id=str(r.character_id),
-        title=r.title,
-        settings=r.settings or {},
+        adventure_title=r.adventure_title,
+        story_brief=r.story_brief,
+        status=AdventureStatus(**r.status),
         created_at=r.created_at.isoformat(),
         updated_at=r.updated_at.isoformat(),
         archived_at=r.archived_at.isoformat() if r.archived_at else None,

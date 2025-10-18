@@ -1,4 +1,4 @@
-from typing import Literal, Optional, List, Dict, Any
+from typing import Literal, List, Optional
 from pydantic import Field
 
 from app.schemas.base import APIBase
@@ -6,17 +6,11 @@ from app.schemas.base import APIBase
 
 class SessionIn(APIBase):
     character_id: str
-    title: Optional[str] = Field(None, max_length=120)
-    settings: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SessionOut(APIBase):
     session_id: str
-    character_id: str
-    title: str
-    settings: Dict[str, Any]
-    created_at: str
-    updated_at: str
+    adventure_title: str
     archived_at: Optional[str] = None
 
 

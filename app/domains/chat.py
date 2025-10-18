@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Literal, Optional
 
+from app.domains.adventures import AdventureStatus
+
 
 @dataclass
 class Message:
@@ -14,8 +16,9 @@ class Message:
 class Session:
     session_id: str
     character_id: str
-    title: str
-    settings: dict
+    adventure_title: str
+    story_brief: str
+    status: AdventureStatus
     created_at: str
     updated_at: str
     archived_at: Optional[str]
