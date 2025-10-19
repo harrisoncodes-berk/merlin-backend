@@ -15,8 +15,7 @@ from app.schemas.chat import (
 )
 from app.repos.adventure_repo import AdventureRepo
 from app.repos.chat_repo import ChatRepo
-from app.services.chat.session_service import SessionService
-from app.services.chat.turn_service import TurnService
+from app.services.chat.chat_service import ChatService
 
 chat_router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -37,17 +36,12 @@ def get_chat_repo(
     return ChatRepo(db_session)
 
 
-def get_session_service(
+def get_chat_service(
+    llm: LLMClient = Depends(get_llm),
     adventure_repo: AdventureRepo = Depends(get_adventure_repo),
     chat_repo: ChatRepo = Depends(get_chat_repo),
-) -> SessionService:
-    return SessionService(adventure_repo, chat_repo)
-
-
-def get_turn_service(
-    llm: LLMClient = Depends(get_llm), chat_repo: ChatRepo = Depends(get_chat_repo)
-) -> TurnService:
-    return TurnService(llm=llm, repo=chat_repo)
+) -> ChatService:
+    return ChatService(llm=llm, adventure_repo=adventure_repo, chat_repo=chat_repo)
 
 
 @chat_router.get("/sessions/{session_id}", response_model=SessionOut)
@@ -64,9 +58,9 @@ async def session(
 async def active_session(
     payload: SessionIn,
     user_id: str = Depends(require_user_id),
-    session_service: SessionService = Depends(get_session_service),
+    chat_service: ChatService = Depends(get_chat_service),
 ):
-    s = await session_service.get_or_create_active_session(user_id, payload.character_id)
+    s = await chat_service.initialize_session(user_id, payload.character_id)
     return SessionOut.model_validate(s)
 
 
@@ -108,16 +102,10 @@ async def send_message(
     session_id: str,
     payload: SendMessageIn,
     user_id: str = Depends(require_user_id),
-    chat_repo: ChatRepo = Depends(get_chat_repo),
-    turn_service: TurnService = Depends(get_turn_service),
+    chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
-        await chat_repo.assert_owned_session(user_id, session_id)
-    except NoResultFound:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    try:
-        msg = await turn_service.handle_turn(
+        msg = await chat_service.handle_turn(
             user_id=user_id,
             session_id=session_id,
             user_text=payload.message,

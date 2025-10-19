@@ -1,15 +1,18 @@
 from typing import List, Optional
+from dataclasses import asdict
 
 from app.adapters.llm.base import LLMClient
 from app.adapters.llm.types import PromptPart, PromptStack
+from app.domains.chat import Session
 from app.services.orchestration import prompt_builder, token_budget
 from app.services.observability.logging import log_event
 from app.services.reliability.circuit_breaker import CircuitBreaker
 from app.settings import get_settings
+from app.repos.adventure_repo import AdventureRepo
 from app.repos.chat_repo import ChatRepo
 
 
-class TurnService:
+class ChatService:
     """
     Orchestrates one chat turn (non-streaming):
       - persist user message
@@ -21,12 +24,40 @@ class TurnService:
     """
 
     def __init__(
-        self, *, llm: LLMClient, repo: ChatRepo, circuit: CircuitBreaker | None = None
+        self, *, llm: LLMClient, adventure_repo: AdventureRepo, chat_repo: ChatRepo, circuit: CircuitBreaker | None = None
     ):
         self.llm = llm
-        self.repo = repo
+        self.adventure_repo = adventure_repo
+        self.chat_repo = chat_repo
         self.circuit = circuit or CircuitBreaker(open_threshold=5, reset_seconds=60)
         self.settings = get_settings()
+
+    async def initialize_session(
+        self, user_id: str, character_id: str
+    ) -> Session:
+        """Get or create an active session for a user and character."""
+        existing_session = await self.chat_repo.get_session_for_character(
+            user_id, character_id
+        )
+        if existing_session and not existing_session.archived_at:
+            return existing_session
+
+        new_adventure = (await self.adventure_repo.list_adventures())[0]
+
+        new_session = await self.chat_repo.create_session(
+            user_id,
+            character_id,
+            new_adventure.title,
+            new_adventure.story_brief,
+            asdict(new_adventure.starting_status),
+        )
+
+        first_message = "hello, how are you?"
+        _ = await self.chat_repo.insert_assistant_message_row(new_session.session_id, first_message)
+
+        await self.chat_repo.db_session.commit()
+        
+        return new_session
 
     async def handle_turn(
         self,
@@ -36,9 +67,9 @@ class TurnService:
         user_text: str,
         trace_id: Optional[str] = None,
     ):
-        _ = await self.repo.insert_user_message_row(session_id, user_text)
+        _ = await self.chat_repo.insert_user_message_row(session_id, user_text)
 
-        last_msgs = await self.repo.list_messages(session_id, after=None, limit=10)
+        last_msgs = await self.chat_repo.list_messages(session_id, after=None, limit=10)
         recent_parts: List[PromptPart] = [
             PromptPart(role=m.role, content=m.content) for m in last_msgs
         ]
@@ -60,10 +91,10 @@ class TurnService:
         if self.circuit.is_open():
             cooldown = self.circuit.remaining_cooldown()
             assistant_text = f"The DM is catching their breath (cooldown {cooldown}s)."
-            msg = await self.repo.insert_assistant_message_row(
+            msg = await self.chat_repo.insert_assistant_message_row(
                 session_id, assistant_text
             )
-            await self.repo.db_session.commit()
+            await self.chat_repo.db_session.commit()
             log_event(
                 "llm.call.end",
                 trace_id=trace_id,
@@ -104,10 +135,10 @@ class TurnService:
                 trace_id=trace_id,
             )
             assistant_text = result.text
-            msg = await self.repo.insert_assistant_message_row(
+            msg = await self.chat_repo.insert_assistant_message_row(
                 session_id, assistant_text
             )
-            await self.repo.db_session.commit()
+            await self.chat_repo.db_session.commit()
 
             log_event(
                 "llm.call.end",

@@ -192,7 +192,6 @@ class ChatRepo:
 
 
 def _row_to_session(r) -> Session:
-    print(r)
     return Session(
         session_id=str(r.session_id),
         character_id=str(r.character_id),
