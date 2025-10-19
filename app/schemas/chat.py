@@ -28,4 +28,5 @@ class MessageHistoryOut(APIBase):
 
 
 class SendMessageIn(APIBase):
+    character_id: str
     message: str = Field(..., min_length=1, max_length=8000)

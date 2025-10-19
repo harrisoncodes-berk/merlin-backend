@@ -1,8 +1,8 @@
-from typing import List, Optional
+from typing import Optional
 from dataclasses import asdict
+import time
 
 from app.adapters.llm.base import LLMClient
-from app.adapters.llm.types import PromptPart, PromptStack
 from app.domains.chat import Session
 from app.services.orchestration import prompt_builder, token_budget
 from app.services.observability.logging import log_event
@@ -17,7 +17,7 @@ class ChatService:
     """
     Orchestrates one chat turn (non-streaming):
       - persist user message
-      - build prompt stack + apply token budget
+      - build prompt payload and apply token budget
       - check circuit breaker
       - call LLM.generate(...)
       - persist assistant message
@@ -50,7 +50,11 @@ class ChatService:
         return f"""Greetings, {character_name}! Welcome to {adventure_title}! {story_brief} {starting_status} How do you proceed, adventurer?"""
 
     async def initialize_session(self, user_id: str, character_id: str) -> Session:
-        """Get or create an active session for a user and character."""
+        """
+        Returns an existing active session for the character if available,
+        otherwise creates a new session, seeds the opening assistant message,
+        and commits it.
+        """
         existing_session = await self.chat_repo.get_session_for_character(
             user_id, character_id
         )
@@ -90,26 +94,30 @@ class ChatService:
         *,
         user_id: str,
         session_id: str,
+        character_id: str,
         user_text: str,
         trace_id: Optional[str] = None,
     ):
+        """
+        Persists the user turn, builds and budgets the prompt payload,
+        consults the circuit breaker, invokes the LLM, persists the assistant turn,
+        and returns the created assistant message row.
+        """
         _ = await self.chat_repo.insert_user_message_row(session_id, user_text)
 
         last_msgs = await self.chat_repo.list_messages(session_id, after=None, limit=10)
-        recent_parts: List[PromptPart] = [
-            PromptPart(role=m.role, content=m.content) for m in last_msgs
-        ]
 
-        stack: PromptStack = prompt_builder.build_prompt_stack(
-            character_sheet=None,
-            session_summary=None,
-            retrieved_chunks=[],
-            recent_turns=recent_parts,
-            scratchpads={},
+        character = await self.character_repo.get_character_for_user(
+            user_id, character_id
         )
 
-        pruned_stack, budget_meta = token_budget.apply_budget(
-            stack,
+        payload = prompt_builder.build_standard_prompt(
+            character=character,
+            messages=last_msgs,
+        )
+
+        pruned_payload, budget_meta = token_budget.apply_budget(
+            payload,
             soft_limit=self.settings.llm_soft_prompt_budget,
             hard_limit=self.settings.llm_hard_prompt_budget,
         )
@@ -150,21 +158,22 @@ class ChatService:
             circuit_state="closed",
         )
 
+        t0 = time.time()
+
         try:
             result = await self.llm.generate(
-                prompt_stack=pruned_stack,
-                tools=None,
+                prompt_payload=pruned_payload,
                 temperature=self.settings.llm_temperature,
-                max_output_tokens=self.settings.llm_max_output_tokens,
+                max_tokens=self.settings.llm_max_output_tokens,
                 json_mode=self.settings.llm_json_mode,
                 timeout_s=self.settings.llm_timeout_seconds,
-                trace_id=trace_id,
             )
             assistant_text = result.text
             msg = await self.chat_repo.insert_assistant_message_row(
                 session_id, assistant_text
             )
             await self.chat_repo.db_session.commit()
+            self.circuit.record_success()
 
             log_event(
                 "llm.call.end",
@@ -174,11 +183,9 @@ class ChatService:
                 provider=self.llm.name(),
                 model=self.llm.model(),
                 streaming=False,
-                latency_ms=None,
-                usage=(result.usage.model_dump() if result.usage else None),
-                tool_calls=[tc.model_dump() for tc in result.tool_calls]
-                if result.tool_calls
-                else [],
+                latency_ms=int((time.time() - t0) * 1000),
+                usage=None,
+                tool_calls=[],
                 retry_count=0,
                 circuit_state="closed",
                 budgeting=budget_meta,
