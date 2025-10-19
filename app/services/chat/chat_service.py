@@ -9,6 +9,7 @@ from app.services.observability.logging import log_event
 from app.services.reliability.circuit_breaker import CircuitBreaker
 from app.settings import get_settings
 from app.repos.adventure_repo import AdventureRepo
+from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 
 
@@ -24,17 +25,31 @@ class ChatService:
     """
 
     def __init__(
-        self, *, llm: LLMClient, adventure_repo: AdventureRepo, chat_repo: ChatRepo, circuit: CircuitBreaker | None = None
+        self,
+        *,
+        llm: LLMClient,
+        adventure_repo: AdventureRepo,
+        character_repo: CharacterRepo,
+        chat_repo: ChatRepo,
+        circuit: CircuitBreaker | None = None,
     ):
         self.llm = llm
         self.adventure_repo = adventure_repo
+        self.character_repo = character_repo
         self.chat_repo = chat_repo
         self.circuit = circuit or CircuitBreaker(open_threshold=5, reset_seconds=60)
         self.settings = get_settings()
 
-    async def initialize_session(
-        self, user_id: str, character_id: str
-    ) -> Session:
+    def build_initial_message(
+        self,
+        character_name: str,
+        adventure_title: str,
+        story_brief: str,
+        starting_status: str,
+    ) -> str:
+        return f"""Greetings, {character_name}! Welcome to {adventure_title}! {story_brief} {starting_status} How do you proceed, adventurer?"""
+
+    async def initialize_session(self, user_id: str, character_id: str) -> Session:
         """Get or create an active session for a user and character."""
         existing_session = await self.chat_repo.get_session_for_character(
             user_id, character_id
@@ -52,11 +67,22 @@ class ChatService:
             asdict(new_adventure.starting_status),
         )
 
-        first_message = "hello, how are you?"
-        _ = await self.chat_repo.insert_assistant_message_row(new_session.session_id, first_message)
+        character = await self.character_repo.get_character_for_user(
+            user_id, character_id
+        )
+
+        first_message = self.build_initial_message(
+            character_name=character.name,
+            adventure_title=new_session.adventure_title,
+            story_brief=new_session.story_brief,
+            starting_status=new_session.status.summary,
+        )
+        _ = await self.chat_repo.insert_assistant_message_row(
+            new_session.session_id, first_message
+        )
 
         await self.chat_repo.db_session.commit()
-        
+
         return new_session
 
     async def handle_turn(

@@ -14,6 +14,7 @@ from app.schemas.chat import (
     SessionIn,
 )
 from app.repos.adventure_repo import AdventureRepo
+from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.chat.chat_service import ChatService
 
@@ -30,6 +31,12 @@ def get_adventure_repo(
     return AdventureRepo(db_session)
 
 
+def get_character_repo(
+    db_session: AsyncSession = Depends(get_db_session),
+) -> CharacterRepo:
+    return CharacterRepo(db_session)
+
+
 def get_chat_repo(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> ChatRepo:
@@ -39,9 +46,15 @@ def get_chat_repo(
 def get_chat_service(
     llm: LLMClient = Depends(get_llm),
     adventure_repo: AdventureRepo = Depends(get_adventure_repo),
+    character_repo: CharacterRepo = Depends(get_character_repo),
     chat_repo: ChatRepo = Depends(get_chat_repo),
 ) -> ChatService:
-    return ChatService(llm=llm, adventure_repo=adventure_repo, chat_repo=chat_repo)
+    return ChatService(
+        llm=llm,
+        adventure_repo=adventure_repo,
+        character_repo=character_repo,
+        chat_repo=chat_repo,
+    )
 
 
 @chat_router.get("/sessions/{session_id}", response_model=SessionOut)

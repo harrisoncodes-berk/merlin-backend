@@ -3,7 +3,7 @@ import dataclasses
 
 @dataclasses.dataclass()
 class AdventureStatus:
-    status: str
+    summary: str
     location: str
     combat_state: bool
 

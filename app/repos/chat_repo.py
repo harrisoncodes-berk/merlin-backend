@@ -67,6 +67,9 @@ class ChatRepo:
             chat_sessions.c.adventure_title,
             chat_sessions.c.story_brief,
             chat_sessions.c.status,
+            chat_sessions.c.created_at,
+            chat_sessions.c.updated_at,
+            chat_sessions.c.archived_at,
         ).where(
             chat_sessions.c.user_id == user_id,
             chat_sessions.c.character_id == character_id,
