@@ -33,9 +33,6 @@ def create_app() -> FastAPI:
             api_key=settings.openai_api_key,
             model=settings.llm_model,
             default_timeout_s=settings.llm_timeout_seconds,
-            max_retries=settings.llm_max_retries,
-            backoff_ms=settings.llm_retry_backoff_ms,
-            enable_tools=settings.enable_tool_calling,
         )
     else:
         print("Using NoOpLLM")

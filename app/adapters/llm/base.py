@@ -1,5 +1,5 @@
-from typing import Protocol, AsyncIterator, List, Optional
-from .types import PromptStack, ToolSpec, LLMResult, LLMChunk
+from typing import Protocol
+from .types import PromptPayload, LLMResult
 
 
 class LLMClient(Protocol):
@@ -9,30 +9,15 @@ class LLMClient(Protocol):
     async def generate(
         self,
         *,
-        prompt_stack: PromptStack,
-        tools: Optional[List[ToolSpec]],
-        temperature: float,
-        max_output_tokens: int,
-        json_mode: bool,
-        timeout_s: int,
-        trace_id: Optional[str],
+        prompt_payload: PromptPayload,
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+        json_mode: bool = False,
+        timeout_s: int = 30,
     ) -> LLMResult: ...
-
-    async def stream(
-        self,
-        *,
-        prompt_stack: PromptStack,
-        tools: Optional[List[ToolSpec]],
-        temperature: float,
-        max_output_tokens: int,
-        json_mode: bool,
-        timeout_s: int,
-        trace_id: Optional[str],
-    ) -> AsyncIterator[LLMChunk]: ...
 
 
 class NoOpLLM:
-    """Safe baseline that returns your existing dummy response. Swap out later."""
     def __init__(self, model: str = "noop"):
         self._model = model
 
@@ -45,30 +30,14 @@ class NoOpLLM:
     async def generate(
         self,
         *,
-        prompt_stack: PromptStack,
-        tools: Optional[List[ToolSpec]],
-        temperature: float,
-        max_output_tokens: int,
-        json_mode: bool,
-        timeout_s: int,
-        trace_id: Optional[str],
+        prompt_payload: PromptPayload,
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+        json_mode: bool = False,
+        timeout_s: int = 30,
     ) -> LLMResult:
-        from .types import LLMResult
         return LLMResult(
             text="The corridor smells of damp stone and old secrets. Footsteps echo ahead.",
-            usage=None,
+            finish_reason="stop",
             raw={"provider": "noop"},
         )
-
-    async def stream(
-        self,
-        *,
-        prompt_stack: PromptStack,
-        tools: Optional[List[ToolSpec]],
-        temperature: float,
-        max_output_tokens: int,
-        json_mode: bool,
-        timeout_s: int,
-        trace_id: Optional[str],
-    ):
-        yield LLMChunk(delta="The corridor smells of damp stone and old secrets. Footsteps echo ahead.", is_final=True)
