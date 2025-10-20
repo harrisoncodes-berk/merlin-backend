@@ -1,6 +1,7 @@
+import json
+import time
 from typing import Optional
 from dataclasses import asdict
-import time
 
 from app.adapters.llm.base import LLMClient
 from app.domains.chat import Session
@@ -117,7 +118,7 @@ class ChatService:
             user_message=user_text,
             character=character,
             messages=last_msgs,
-        )    
+        )
 
         pruned_payload, budget_meta = token_budget.apply_budget(
             payload,
@@ -171,7 +172,9 @@ class ChatService:
                 json_mode=self.settings.llm_json_mode,
                 timeout_s=self.settings.llm_timeout_seconds,
             )
-            assistant_text = result.text
+
+            assistant_text = json.loads(result.text)["message_to_user"]
+
             msg = await self.chat_repo.insert_assistant_message_row(
                 session_id, assistant_text
             )

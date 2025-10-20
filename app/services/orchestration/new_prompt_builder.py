@@ -5,7 +5,7 @@ from app.domains.chat import Message
 from app.adapters.llm.types import PromptPayload
 
 INTRO_PROMPT = """You are Merlin, a Dungeon Master guiding a Dungeons & Dragons adventure. Speak from the DM’s perspective and keep narration immersive but concise."""
-STANDARD_RULES_PROMPT = """
+STANDARD_RULES_PROMPT = """Rules:
 1. Utilize the character's abilities and skills to resolve ability/skill checks.
 2. Check the character's inventory for items that can be used in the situation.
 3. Reference the chat history to maintain consistency in the story.

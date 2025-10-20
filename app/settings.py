@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.7
     llm_max_output_tokens: int = 700
     llm_streaming: bool = True
-    llm_json_mode: bool = False
+    llm_json_mode: bool = True
     llm_timeout_seconds: int = 30
     llm_max_retries: int = 2
     llm_retry_backoff_ms: int = 250
