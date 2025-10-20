@@ -121,7 +121,6 @@ async def send_message(
         msg = await chat_service.handle_turn(
             user_id=user_id,
             session_id=session_id,
-            character_id=payload.character_id,
             user_text=payload.message,
             trace_id=getattr(request.state, "trace_id", None),
         )

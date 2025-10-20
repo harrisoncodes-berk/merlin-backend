@@ -32,7 +32,7 @@ async def get_my_character(
     user_id: str = Depends(require_user_id),
     character_repo: CharacterRepo = Depends(get_character_repo),
 ):
-    c = await character_repo.get_character_for_user(user_id, id)
+    c = await character_repo.get_character_by_character_id(user_id, id)
     if not c:
         raise HTTPException(status_code=404, detail="Character not found")
     return CharacterOut.model_validate(c)

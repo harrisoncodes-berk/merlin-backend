@@ -4,7 +4,8 @@ import time
 
 from app.adapters.llm.base import LLMClient
 from app.domains.chat import Session
-from app.services.orchestration import prompt_builder, token_budget
+from app.services.orchestration.new_prompt_builder import NewPromptBuilder
+from app.services.orchestration import token_budget
 from app.services.observability.logging import log_event
 from app.services.reliability.circuit_breaker import CircuitBreaker
 from app.settings import get_settings
@@ -71,7 +72,7 @@ class ChatService:
             asdict(new_adventure.starting_status),
         )
 
-        character = await self.character_repo.get_character_for_user(
+        character = await self.character_repo.get_character_by_character_id(
             user_id, character_id
         )
 
@@ -94,7 +95,6 @@ class ChatService:
         *,
         user_id: str,
         session_id: str,
-        character_id: str,
         user_text: str,
         trace_id: Optional[str] = None,
     ):
@@ -107,14 +107,17 @@ class ChatService:
 
         last_msgs = await self.chat_repo.list_messages(session_id, after=None, limit=10)
 
-        character = await self.character_repo.get_character_for_user(
-            user_id, character_id
+        character = await self.character_repo.get_character_by_session_id(
+            user_id, session_id
         )
 
-        payload = prompt_builder.build_standard_prompt(
+        new_prompt_builder = NewPromptBuilder()
+
+        payload = new_prompt_builder.build_standard_prompt(
+            user_message=user_text,
             character=character,
             messages=last_msgs,
-        )
+        )    
 
         pruned_payload, budget_meta = token_budget.apply_budget(
             payload,

@@ -23,13 +23,18 @@ STANDARD_RULES_PROMPT = """
 class NewPromptBuilder:
     def build_standard_prompt(
         self,
+        user_message: str,
         character: Character,
         messages: List[Message],
     ) -> PromptPayload:
         user_part_character = "## Character Sheet\n" + self._render_character(character)
+
         user_part_conversation = "## Conversation\n" + self._render_conversation(
             messages
         )
+
+        user_part_user_message = "## Latest User Message to respond to\n" + user_message
+
         user_part_task = (
             "## Task\n"
             "Continue the story as Merlin. Follow the rules. "
@@ -38,7 +43,12 @@ class NewPromptBuilder:
 
         return PromptPayload(
             system_messages=[INTRO_PROMPT, STANDARD_RULES_PROMPT],
-            user_messages=[user_part_character, user_part_conversation, user_part_task],
+            user_messages=[
+                user_part_character,
+                user_part_conversation,
+                user_part_user_message,
+                user_part_task,
+            ],
         )
 
     def build_followup_prompt(self) -> str:
@@ -50,14 +60,11 @@ class NewPromptBuilder:
         )
 
     def _render_character(self, c: Character) -> str:
-        abilities = getattr(c, "abilities", None)
-        if abilities:
-            abl = (
-                f"STRENGTH {abilities.str}  DEXTERITY {abilities.dex}  CONSTITUTION {abilities.con}  "
-                f"INTELLIGENCE {abilities.int}  WISDOM {abilities.wis}  CHARISMA {abilities.cha}"
-            )
-        else:
-            abl = "N/A"
+        abilities = c.abilities
+        abl = (
+            f"STRENGTH {abilities.str}  DEXTERITY {abilities.dex}  CONSTITUTION {abilities.con}  "
+            f"INTELLIGENCE {abilities.int}  WISDOM {abilities.wis}  CHARISMA {abilities.cha}"
+        )
 
         skills = (
             ", ".join(
