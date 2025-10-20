@@ -5,7 +5,7 @@ from dataclasses import asdict
 
 from app.adapters.llm.base import LLMClient
 from app.domains.chat import Session
-from app.services.orchestration.new_prompt_builder import NewPromptBuilder
+from app.services.orchestration.prompt_builder import PromptBuilder
 from app.services.orchestration import token_budget
 from app.services.observability.logging import log_event
 from app.services.reliability.circuit_breaker import CircuitBreaker
@@ -112,9 +112,9 @@ class ChatService:
             user_id, session_id
         )
 
-        new_prompt_builder = NewPromptBuilder()
+        prompt_builder = PromptBuilder()
 
-        payload = new_prompt_builder.build_standard_prompt(
+        payload = prompt_builder.build_standard_prompt(
             user_message=user_text,
             character=character,
             messages=last_msgs,
