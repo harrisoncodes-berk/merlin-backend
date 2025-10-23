@@ -57,6 +57,7 @@ class ChatService:
         otherwise creates a new session, seeds the opening assistant message,
         and commits it.
         """
+
         existing_session = await self.chat_repo.get_session_for_character(
             user_id, character_id
         )
@@ -104,52 +105,86 @@ class ChatService:
         consults the circuit breaker, invokes the LLM, persists the assistant turn,
         and returns the created assistant message row.
         """
-        _ = await self.chat_repo.insert_user_message_row(session_id, user_text)
+        await self.chat_repo.insert_user_message_row(session_id, user_text)
 
+        character, last_msgs = await self._load_context(user_id, session_id)
+
+        payload = self._build_payload(character, last_msgs, user_text)
+        pruned_payload, budget_meta = self._apply_budget(payload)
+
+        if self.circuit.is_open():
+            return await self._respond_cooldown(
+                session_id, user_id, trace_id, budget_meta
+            )
+
+        self._log_start(user_id, session_id, trace_id, budget_meta)
+
+        t0 = time.time()
+        try:
+            result_text = await self._call_llm(pruned_payload)
+            assistant_text = self._extract_message_to_user(result_text)
+            msg = await self._persist_assistant_turn(session_id, assistant_text)
+            await self.chat_repo.db_session.commit()
+            self.circuit.record_success()
+            self._log_end(user_id, session_id, trace_id, t0, budget_meta)
+            return msg
+        except Exception as e:
+            self.circuit.record_failure()
+            self._log_error(user_id, session_id, trace_id, budget_meta, e)
+            raise
+
+    async def _load_context(self, user_id: str, session_id: str):
         last_msgs = await self.chat_repo.list_messages(session_id, after=None, limit=10)
-
         character = await self.character_repo.get_character_by_session_id(
             user_id, session_id
         )
+        return character, last_msgs
 
-        prompt_builder = PromptBuilder()
-
-        payload = prompt_builder.build_standard_prompt(
+    def _build_payload(self, character, last_msgs, user_text: str):
+        builder = PromptBuilder()
+        return builder.build_standard_prompt(
             user_message=user_text,
             character=character,
             messages=last_msgs,
         )
 
+    def _apply_budget(self, payload):
         pruned_payload, budget_meta = token_budget.apply_budget(
             payload,
             soft_limit=self.settings.llm_soft_prompt_budget,
             hard_limit=self.settings.llm_hard_prompt_budget,
         )
+        return pruned_payload, budget_meta
 
-        if self.circuit.is_open():
-            cooldown = self.circuit.remaining_cooldown()
-            assistant_text = f"The DM is catching their breath (cooldown {cooldown}s)."
-            msg = await self.chat_repo.insert_assistant_message_row(
-                session_id, assistant_text
-            )
-            await self.chat_repo.db_session.commit()
-            log_event(
-                "llm.call.end",
-                trace_id=trace_id,
-                session_id=session_id,
-                user_id=user_id,
-                provider="circuit-open",
-                model="n/a",
-                streaming=False,
-                latency_ms=0,
-                usage=None,
-                tool_calls=[],
-                retry_count=0,
-                circuit_state="open",
-                budgeting=budget_meta,
-            )
-            return msg
+    async def _respond_cooldown(
+        self, session_id: str, user_id: str, trace_id: Optional[str], budget_meta
+    ):
+        cooldown = self.circuit.remaining_cooldown()
+        assistant_text = f"The DM is catching their breath (cooldown {cooldown}s)."
+        msg = await self.chat_repo.insert_assistant_message_row(
+            session_id, assistant_text
+        )
+        await self.chat_repo.db_session.commit()
+        log_event(
+            "llm.call.end",
+            trace_id=trace_id,
+            session_id=session_id,
+            user_id=user_id,
+            provider="circuit-open",
+            model="n/a",
+            streaming=False,
+            latency_ms=0,
+            usage=None,
+            tool_calls=[],
+            retry_count=0,
+            circuit_state="open",
+            budgeting=budget_meta,
+        )
+        return msg
 
+    def _log_start(
+        self, user_id: str, session_id: str, trace_id: Optional[str], budget_meta
+    ):
         log_event(
             "llm.call.start",
             trace_id=trace_id,
@@ -162,57 +197,70 @@ class ChatService:
             circuit_state="closed",
         )
 
-        t0 = time.time()
+    def _log_end(
+        self,
+        user_id: str,
+        session_id: str,
+        trace_id: Optional[str],
+        t0: float,
+        budget_meta,
+    ):
+        log_event(
+            "llm.call.end",
+            trace_id=trace_id,
+            session_id=session_id,
+            user_id=user_id,
+            provider=self.llm.name(),
+            model=self.llm.model(),
+            streaming=False,
+            latency_ms=int((time.time() - t0) * 1000),
+            usage=None,
+            tool_calls=[],
+            retry_count=0,
+            circuit_state="closed",
+            budgeting=budget_meta,
+        )
 
+    def _log_error(
+        self,
+        user_id: str,
+        session_id: str,
+        trace_id: Optional[str],
+        budget_meta,
+        e: Exception,
+    ):
+        log_event(
+            "llm.call.error",
+            trace_id=trace_id,
+            session_id=session_id,
+            user_id=user_id,
+            provider=self.llm.name(),
+            model=self.llm.model(),
+            streaming=False,
+            error={"type": type(e).__name__, "message_redacted": "generation failed"},
+            circuit_state="open" if self.circuit.is_open() else "closed",
+            budgeting=budget_meta,
+        )
+
+    async def _call_llm(self, pruned_payload):
+        result = await self.llm.generate(
+            prompt_payload=pruned_payload,
+            temperature=self.settings.llm_temperature,
+            max_tokens=self.settings.llm_max_output_tokens,
+            json_mode=self.settings.llm_json_mode,
+            timeout_s=self.settings.llm_timeout_seconds,
+        )
+        return result.text
+
+    def _extract_message_to_user(self, result_text: str) -> str:
+        """
+        Parses the model output and extracts message_to_user, with a safe fallback.
+        """
         try:
-            result = await self.llm.generate(
-                prompt_payload=pruned_payload,
-                temperature=self.settings.llm_temperature,
-                max_tokens=self.settings.llm_max_output_tokens,
-                json_mode=self.settings.llm_json_mode,
-                timeout_s=self.settings.llm_timeout_seconds,
-            )
-
-            assistant_text = json.loads(result.text)["message_to_user"]
-
-            msg = await self.chat_repo.insert_assistant_message_row(
-                session_id, assistant_text
-            )
-            await self.chat_repo.db_session.commit()
-            self.circuit.record_success()
-
-            log_event(
-                "llm.call.end",
-                trace_id=trace_id,
-                session_id=session_id,
-                user_id=user_id,
-                provider=self.llm.name(),
-                model=self.llm.model(),
-                streaming=False,
-                latency_ms=int((time.time() - t0) * 1000),
-                usage=None,
-                tool_calls=[],
-                retry_count=0,
-                circuit_state="closed",
-                budgeting=budget_meta,
-            )
-            return msg
-
-        except Exception as e:
-            self.circuit.record_failure()
-            log_event(
-                "llm.call.error",
-                trace_id=trace_id,
-                session_id=session_id,
-                user_id=user_id,
-                provider=self.llm.name(),
-                model=self.llm.model(),
-                streaming=False,
-                error={
-                    "type": type(e).__name__,
-                    "message_redacted": "generation failed",
-                },
-                circuit_state="open" if self.circuit.is_open() else "closed",
-                budgeting=budget_meta,
-            )
-            raise
+            data = json.loads(result_text)
+            mt = data.get("message_to_user")
+            if isinstance(mt, str) and mt.strip():
+                return mt.strip()
+        except Exception:
+            pass
+        return result_text
