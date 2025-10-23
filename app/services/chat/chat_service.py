@@ -82,7 +82,7 @@ class ChatService:
             character_name=character.name,
             adventure_title=new_session.adventure_title,
             story_brief=new_session.story_brief,
-            starting_status=new_session.status.summary,
+            starting_status=new_session.adventure_status.summary,
         )
         _ = await self.chat_repo.insert_assistant_message_row(
             new_session.session_id, first_message

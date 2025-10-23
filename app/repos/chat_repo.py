@@ -45,7 +45,7 @@ class ChatRepo:
             chat_sessions.c.character_id,
             chat_sessions.c.adventure_title,
             chat_sessions.c.story_brief,
-            chat_sessions.c.status,
+            chat_sessions.c.adventure_status,
             chat_sessions.c.created_at,
             chat_sessions.c.updated_at,
             chat_sessions.c.archived_at,
@@ -66,7 +66,7 @@ class ChatRepo:
             chat_sessions.c.character_id,
             chat_sessions.c.adventure_title,
             chat_sessions.c.story_brief,
-            chat_sessions.c.status,
+            chat_sessions.c.adventure_status,
             chat_sessions.c.created_at,
             chat_sessions.c.updated_at,
             chat_sessions.c.archived_at,
@@ -85,7 +85,7 @@ class ChatRepo:
         character_id: str,
         adventure_title: str,
         story_brief: str,
-        status: AdventureStatus,
+        adventure_status: AdventureStatus,
     ) -> Session:
         stmt = (
             insert(chat_sessions)
@@ -94,14 +94,14 @@ class ChatRepo:
                 character_id=character_id,
                 adventure_title=adventure_title,
                 story_brief=story_brief,
-                status=status,
+                adventure_status=adventure_status,
             )
             .returning(
                 chat_sessions.c.session_id,
                 chat_sessions.c.character_id,
                 chat_sessions.c.adventure_title,
                 chat_sessions.c.story_brief,
-                chat_sessions.c.status,
+                chat_sessions.c.adventure_status,
                 chat_sessions.c.created_at,
                 chat_sessions.c.updated_at,
                 chat_sessions.c.archived_at,
@@ -110,11 +110,11 @@ class ChatRepo:
         rec = (await self.db_session.execute(stmt)).first()
         return _row_to_session(rec)
 
-    async def update_session_status(self, session_id: str, status: AdventureStatus) -> None:
+    async def update_session_adventure_status(self, session_id: str, adventure_status: AdventureStatus) -> None:
         stmt = (
             update(chat_sessions)
             .where(chat_sessions.c.session_id == session_id)
-            .values(status=status)
+            .values(adventure_status=adventure_status)
         )
         await self.db_session.execute(stmt)
 
@@ -208,7 +208,7 @@ def _row_to_session(r) -> Session:
         character_id=str(r.character_id),
         adventure_title=r.adventure_title,
         story_brief=r.story_brief,
-        status=AdventureStatus(**r.status),
+        adventure_status=AdventureStatus(**r.adventure_status),
         created_at=r.created_at.isoformat(),
         updated_at=r.updated_at.isoformat(),
         archived_at=r.archived_at.isoformat() if r.archived_at else None,

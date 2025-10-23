@@ -32,7 +32,7 @@ chat_sessions = Table(
     ),
     Column("adventure_title", Text, nullable=False),
     Column("story_brief", Text, nullable=False),
-    Column("status", JSONB, nullable=False),
+    Column("adventure_status", JSONB, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
     Column("archived_at", DateTime(timezone=True), nullable=True),

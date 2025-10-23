@@ -1,14 +1,13 @@
-import dataclasses
+from dataclasses import dataclass
 
-
-@dataclasses.dataclass()
+@dataclass
 class AdventureStatus:
     summary: str
     location: str
     combat_state: bool
 
 
-@dataclasses.dataclass()
+@dataclass
 class Adventure:
     adventure_id: str
     title: str

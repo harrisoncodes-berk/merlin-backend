@@ -18,7 +18,7 @@ class Session:
     character_id: str
     adventure_title: str
     story_brief: str
-    status: AdventureStatus
+    adventure_status: AdventureStatus
     created_at: str
     updated_at: str
     archived_at: Optional[str]
