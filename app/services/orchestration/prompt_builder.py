@@ -1,5 +1,6 @@
 from typing import List
 
+from app.domains.adventures import AdventureStatus
 from app.domains.character import Character
 from app.domains.chat import Message
 from app.adapters.llm.types import PromptPayload
@@ -15,9 +16,15 @@ STANDARD_RULES_PROMPT = """Rules:
 7. Enfore relative realism for medieval fantasy. If the character tries to do something that is not possible, respond with "That is not possible."
 8. Keep responses to within 2 to 4 sentences.
 9. Provide all responses to the user in JSON format with no other text.
-10. Output Schema:
+10. Update the adventure status based on the current turn. The summary field should be an ongoing summary of what the character has done and what has happened in the story so far. Location should be a short description of the current location. Combat state should be true if the character is in combat, false otherwise.
+11. Output Schema:
 {
-    "message_to_user": string
+    "message_to_user": string,
+    "adventure_status": {
+        "summary": string,
+        "location": string,
+        "combat_state": boolean
+    }
 }
 """.strip()
 
@@ -25,15 +32,18 @@ STANDARD_RULES_PROMPT = """Rules:
 class PromptBuilder:
     def build_standard_prompt(
         self,
+        story_brief: str,
+        adventure_status: AdventureStatus,
         user_message: str,
         character: Character,
-        messages: List[Message],
     ) -> PromptPayload:
-        user_part_character = "## Character Sheet\n" + self._render_character(character)
+        user_part_story_brief = "## Story Brief\n" + story_brief
 
-        user_part_conversation = "## Conversation\n" + self._render_conversation(
-            messages
+        user_part_adventure_status = (
+            "## Adventure Status\n" + self._render_adventure_status(adventure_status)
         )
+
+        user_part_character = "## Character Sheet\n" + self._render_character(character)
 
         user_part_user_message = "## Latest User Message to respond to\n" + user_message
 
@@ -46,8 +56,9 @@ class PromptBuilder:
         return PromptPayload(
             system_messages=[INTRO_PROMPT, STANDARD_RULES_PROMPT],
             user_messages=[
+                user_part_story_brief,
+                user_part_adventure_status,
                 user_part_character,
-                user_part_conversation,
                 user_part_user_message,
                 user_part_task,
             ],
@@ -59,6 +70,13 @@ class PromptBuilder:
     def build_combat_prompt(self) -> str:
         return (
             "Enter combat mode. Create a level 1 enemy and resolve actions per rules."
+        )
+
+    def _render_adventure_status(self, adventure_status: AdventureStatus) -> str:
+        return (
+            f"Summary: {adventure_status.summary}\n"
+            f"Location: {adventure_status.location}\n"
+            f"Combat State: {adventure_status.combat_state}"
         )
 
     def _render_character(self, c: Character) -> str:

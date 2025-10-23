@@ -1,10 +1,13 @@
 import json
 import time
-from typing import Optional
+from typing import Optional, Tuple
 from dataclasses import asdict
 
 from app.adapters.llm.base import LLMClient
+from app.domains.adventures import AdventureStatus
+from app.domains.character import Character
 from app.domains.chat import Session
+from app.adapters.llm.types import PromptPayload
 from app.services.orchestration.prompt_builder import PromptBuilder
 from app.services.orchestration import token_budget
 from app.services.observability.logging import log_event
@@ -107,10 +110,11 @@ class ChatService:
         """
         await self.chat_repo.insert_user_message_row(session_id, user_text)
 
-        character, last_msgs = await self._load_context(user_id, session_id)
+        character, session = await self._load_context(user_id, session_id)
 
-        payload = self._build_payload(character, last_msgs, user_text)
-        pruned_payload, budget_meta = self._apply_budget(payload)
+        prompt_payload = self._build_prompt_payload(session, character, user_text)
+
+        pruned_prompt_payload, budget_meta = self._apply_budget(prompt_payload)
 
         if self.circuit.is_open():
             return await self._respond_cooldown(
@@ -121,31 +125,42 @@ class ChatService:
 
         t0 = time.time()
         try:
-            result_text = await self._call_llm(pruned_payload)
+            result_text = await self._call_llm(pruned_prompt_payload)
+
             assistant_text = self._extract_message_to_user(result_text)
-            msg = await self._persist_assistant_turn(session_id, assistant_text)
+            msg = await self.chat_repo.insert_assistant_message_row(session_id, assistant_text)
+
+            await self._update_adventure_status(session_id, result_text)
+
             await self.chat_repo.db_session.commit()
+
             self.circuit.record_success()
             self._log_end(user_id, session_id, trace_id, t0, budget_meta)
+            
             return msg
         except Exception as e:
             self.circuit.record_failure()
             self._log_error(user_id, session_id, trace_id, budget_meta, e)
             raise
 
-    async def _load_context(self, user_id: str, session_id: str):
-        last_msgs = await self.chat_repo.list_messages(session_id, after=None, limit=10)
+    async def _load_context(
+        self, user_id: str, session_id: str
+    ) -> Tuple[Character, Session]:
+        session = await self.chat_repo.get_session(user_id, session_id)
         character = await self.character_repo.get_character_by_session_id(
             user_id, session_id
         )
-        return character, last_msgs
+        return character, session
 
-    def _build_payload(self, character, last_msgs, user_text: str):
+    def _build_prompt_payload(
+        self, session: Session, character: Character, user_text: str
+    ) -> PromptPayload:
         builder = PromptBuilder()
         return builder.build_standard_prompt(
+            story_brief=session.story_brief,
+            adventure_status=session.adventure_status,
             user_message=user_text,
             character=character,
-            messages=last_msgs,
         )
 
     def _apply_budget(self, payload):
@@ -264,3 +279,9 @@ class ChatService:
         except Exception:
             pass
         return result_text
+
+    async def _update_adventure_status(self, session_id: str, result_text: str):
+        adventure_status = json.loads(result_text).get("adventure_status")
+        await self.chat_repo.update_session_adventure_status(
+            session_id, AdventureStatus(**adventure_status)
+        )

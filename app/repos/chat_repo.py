@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Optional, List
 from sqlalchemy import select, insert, func, literal_column, update
 from sqlalchemy.exc import NoResultFound
@@ -94,7 +95,7 @@ class ChatRepo:
                 character_id=character_id,
                 adventure_title=adventure_title,
                 story_brief=story_brief,
-                adventure_status=adventure_status,
+                adventure_status=asdict(adventure_status),
             )
             .returning(
                 chat_sessions.c.session_id,
@@ -114,7 +115,7 @@ class ChatRepo:
         stmt = (
             update(chat_sessions)
             .where(chat_sessions.c.session_id == session_id)
-            .values(adventure_status=adventure_status)
+            .values(adventure_status=asdict(adventure_status))
         )
         await self.db_session.execute(stmt)
 
