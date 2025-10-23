@@ -1,5 +1,5 @@
 from typing import Optional, List
-from sqlalchemy import select, insert, func, literal_column
+from sqlalchemy import select, insert, func, literal_column, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -109,6 +109,14 @@ class ChatRepo:
         )
         rec = (await self.db_session.execute(stmt)).first()
         return _row_to_session(rec)
+
+    async def update_session_status(self, session_id: str, status: AdventureStatus) -> None:
+        stmt = (
+            update(chat_sessions)
+            .where(chat_sessions.c.session_id == session_id)
+            .values(status=status)
+        )
+        await self.db_session.execute(stmt)
 
     async def list_messages(
         self,
