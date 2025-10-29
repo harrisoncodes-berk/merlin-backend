@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.character import Character, Spellcasting
@@ -98,6 +98,17 @@ class CharacterRepo:
         row = res.mappings().first()
         return _row_to_character(row) if row else None
 
+    async def update_character_inventory(self, character_id: str, inventory: list[Item]) -> None:
+        stmt = (
+            update(characters)
+            .where(characters.c.id == character_id)
+            .values(inventory=inventory)
+        )
+        try:
+            await self.db_session.execute(stmt)
+        except Exception as e:
+            print(f"Error updating character inventory: {e}")
+            raise
 
 def _row_to_character(row: dict) -> Character:
     return Character(
