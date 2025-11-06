@@ -5,6 +5,30 @@ from app.schemas.base import APIBase
 AbilityKey = Literal["str", "dex", "con", "int", "wis", "cha"]
 SpellLevel = Literal["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
+Abilities = Literal[
+    "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"
+]
+Skills = Literal[
+    "acrobatics",
+    "animal handling",
+    "arcana",
+    "athletics",
+    "deception",
+    "history",
+    "insight",
+    "intimidation",
+    "investigation",
+    "medicine",
+    "nature",
+    "perception",
+    "performance",
+    "persuasion",
+    "religion",
+    "sleight of hand",
+    "stealth",
+    "survival",
+]
+
 
 class AbilityScoresOut(APIBase):
     str: int

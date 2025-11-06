@@ -74,7 +74,7 @@ class ChatService:
             character_id,
             new_adventure.title,
             new_adventure.story_brief,
-            asdict(new_adventure.starting_status),
+            new_adventure.starting_status,
         )
 
         character = await self.character_repo.get_character_by_character_id(
