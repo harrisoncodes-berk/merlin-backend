@@ -122,8 +122,8 @@ class ChatRepo:
     async def list_messages(
         self,
         session_id: str,
-        after: Optional[int],
-        limit: int,
+        after: Optional[int] = None,
+        limit: int = 10,
     ) -> List[Message]:
         if after is not None:
             stmt = (

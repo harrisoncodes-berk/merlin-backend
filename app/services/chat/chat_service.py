@@ -1,12 +1,11 @@
 import json
 import time
-from typing import Optional, Tuple
-from dataclasses import asdict
+from typing import List, Optional, Tuple
 
 from app.adapters.llm.base import LLMClient
 from app.domains.adventures import AdventureStatus
 from app.domains.character import Character
-from app.domains.chat import Session
+from app.domains.chat import Message, Session
 from app.adapters.llm.types import PromptPayload
 from app.services.orchestration.prompt_builder import PromptBuilder
 from app.services.orchestration import token_budget
@@ -110,9 +109,9 @@ class ChatService:
         """
         await self.chat_repo.insert_user_message_row(session_id, user_text)
 
-        character, session = await self._load_context(user_id, session_id)
+        session, chat_history, character = await self._load_context(user_id, session_id)
 
-        prompt_payload = self._build_prompt_payload(session, character, user_text)
+        prompt_payload = self._build_prompt_payload(session, chat_history, character, user_text)
 
         pruned_prompt_payload, budget_meta = self._apply_budget(prompt_payload)
 
@@ -145,20 +144,22 @@ class ChatService:
 
     async def _load_context(
         self, user_id: str, session_id: str
-    ) -> Tuple[Character, Session]:
+    ) -> Tuple[Session, List[Message], Character]:
         session = await self.chat_repo.get_session(user_id, session_id)
+        chat_history = await self.chat_repo.list_messages(session_id, limit=10)
         character = await self.character_repo.get_character_by_session_id(
             user_id, session_id
         )
-        return character, session
+        return session, chat_history, character
 
     def _build_prompt_payload(
-        self, session: Session, character: Character, user_text: str
+        self, session: Session, chat_history: List[Message], character: Character, user_text: str
     ) -> PromptPayload:
         builder = PromptBuilder()
         return builder.build_standard_prompt(
             story_brief=session.story_brief,
             adventure_status=session.adventure_status,
+            chat_history=chat_history,
             user_message=user_text,
             character=character,
         )

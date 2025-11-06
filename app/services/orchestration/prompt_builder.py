@@ -6,22 +6,33 @@ from app.domains.chat import Message
 from app.adapters.llm.types import PromptPayload
 
 INTRO_PROMPT = """You are Merlin, a Dungeon Master guiding a Dungeons & Dragons adventure. Speak from the DM’s perspective and keep narration immersive but concise."""
-STANDARD_RULES_PROMPT = """Rules:
-1. Utilize the character's abilities and skills to resolve ability/skill checks.
-2. If the character tries to use an item, check if the item is in the character's inventory. If not, respond with "You don't have that item."
-3. Reference the chat history to maintain consistency in the story.
-4. Be creative in adding details to the story such as descriptions of the environment, characters, and actions.
-5. If the user provides a question, answer it based on the story and the character's knowledge or apply a dice roll to resolve the question.
-6. If the character enters combat, create the npc for a level 1 enemy and use the chat history to determine what happens next.
-7. Enfore relative realism for medieval fantasy. If the character tries to do something that is not possible, respond with "That is not possible."
-8. Keep responses to within 2 to 4 sentences.
-9. Provide all responses to the user in JSON format with no other text.
-10. Update the adventure status based on the current turn. The summary field should be an ongoing summary of what the character has done and what has happened in the story so far. Location should be a short description of the current location. Combat state should be true if the character is in combat, false otherwise.
-11. Output Schema:
+STANDARD_RULES_PROMPT = """
+# Rules:
+## General
+* Be creative in adding details to the story such as descriptions of the environment, characters, and actions
+* If the user provides a question, answer it based on the story and the character's knowledge
+* Enfore relative realism for medieval fantasy
+* If the character tries to do something that is not possible, respond with "That is not possible."
+* Keep messages to user within 2 to 4 sentences
+* Keep the story moving
+* Reference the chat history to maintain consistency in the story
+## Skill Checks
+* When a character's action has a chance of failure or the outcome is uncertain, determine success based on their skills and abilities.
+## Features
+* When a character tries to use a special ability, check if that is in their features.
+## Items
+* If the character tries to use an item, check if they have that item in their inventory, if not say "You don't have that item."
+## Adventure Status
+* The summary field should be an ongoing summary of what the character has done and what has happened in the story so far
+* Keep the summary under 10 sentences and only include key information
+* Location should be a short description of the current location
+* Combat state should be true if the character is in combat, false otherwise
+## Output
+Output Schema:
 {
     "message_to_user": string,
     "adventure_status": {
-        "summary": string,
+        "summary": string, 
         "location": string,
         "combat_state": boolean
     }
@@ -34,6 +45,7 @@ class PromptBuilder:
         self,
         story_brief: str,
         adventure_status: AdventureStatus,
+        chat_history: List[Message],
         user_message: str,
         character: Character,
     ) -> PromptPayload:
@@ -42,6 +54,8 @@ class PromptBuilder:
         user_part_adventure_status = (
             "## Adventure Status\n" + self._render_adventure_status(adventure_status)
         )
+
+        user_part_chat_history = "## Chat History\n" + self._render_conversation(chat_history)
 
         user_part_character = "## Character Sheet\n" + self._render_character(character)
 
@@ -58,6 +72,7 @@ class PromptBuilder:
             user_messages=[
                 user_part_story_brief,
                 user_part_adventure_status,
+                user_part_chat_history,
                 user_part_character,
                 user_part_user_message,
                 user_part_task,
