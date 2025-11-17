@@ -2,7 +2,6 @@ import json
 from typing import List, Tuple
 
 from app.adapters.llm.openai_client import OpenAILLM
-from app.domains.adventures import AdventureStatus
 from app.domains.character import Character
 from app.domains.chat import Message, Session
 from app.adapters.llm.types import PromptPayload
@@ -10,6 +9,7 @@ from app.services.orchestration.prompt_builder import PromptBuilder
 from app.repos.adventure_repo import AdventureRepo
 from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
+from app.services.tools.tools import update_adventure_status
 
 
 class ChatService:
@@ -97,7 +97,7 @@ class ChatService:
             assistant_text = self._extract_message_to_user(result_text)
             msg = await self.chat_repo.insert_assistant_message_row(session_id, assistant_text)
 
-            await self._update_adventure_status(session_id, result_text)
+            await update_adventure_status(self.chat_repo, session_id, result_text)
 
             await self.chat_repo.db_session.commit()
             
@@ -150,10 +150,3 @@ class ChatService:
         except Exception:
             pass
         return result_text
-
-    async def _update_adventure_status(self, session_id: str, result_text: str):
-        """Updates the adventure status for the given session based on the model output."""
-        adventure_status = json.loads(result_text).get("adventure_status")
-        await self.chat_repo.update_session_adventure_status(
-            session_id, AdventureStatus(**adventure_status)
-        )
