@@ -1,18 +1,6 @@
-# from openai.types.responses import (
-#     Response,
-#     ResponseOutputMessage,
-#     ResponseOutputText,
-#     Reasoning,
-#     ResponseTextConfig,
-#     ResponseFormatText,
-#     ResponseUsage,
-#     InputTokensDetails,
-#     OutputTokensDetails,
-# )
-
 # Response(
-#     id="resp_09c58d643278889b006919250fde48819294b719c14e8a2870",
-#     created_at=1763255567.0,
+#     id="resp_02a8d91c764bad3000691a88a0e5b081a29ccfe36081c00f55",
+#     created_at=1763346592.0,
 #     error=None,
 #     incomplete_details=None,
 #     instructions=None,
@@ -21,89 +9,46 @@
 #     object="response",
 #     output=[
 #         ResponseFunctionToolCall(
-#             arguments='{"name":"Hary"}',
-#             call_id="call_5uKG4zDKyNb1m58abnTjJYem",
-#             name="glaze_tool",
+#             arguments='{"summary":"You have infiltrated Stormspire Keep, overheard a conversation about the princess\'s arrival, grabbed a rusted key from a nearby table, and are now moving deeper into the castle. The corridor is dimly lit, with distant voices echoing around you. You continue down the corridor, the sound of your footsteps muffled by the damp stone floor.","location":"Inside Stormspire Keep, a narrow corridor leading deeper into the castle.","combat_state":false}',
+#             call_id="call_B7QR43u0wDmmZQt8o7Yc46lj",
+#             name="update_adventure_status",
 #             type="function_call",
-#             id="fc_09c58d643278889b00691925110e408192945194456a039be5",
+#             id="fc_02a8d91c764bad3000691a88a1481881a280e10254ecae7449",
 #             status="completed",
-#         )
-#     ],
-#     parallel_tool_calls=True,
-#     temperature=1.0,
-#     tool_choice="auto",
-#     tools=[
-#         FunctionTool(
-#             name="glaze_tool",
-#             parameters={
-#                 "type": "object",
-#                 "properties": {"name": {"type": "string"}},
-#                 "additionalProperties": False,
-#                 "required": ["name"],
-#             },
-#             strict=True,
-#             type="function",
-#             description="If the prompt describes someone who is awesome, return the name of the person.",
-#         )
-#     ],
-#     top_p=1.0,
-#     background=False,
-#     conversation=None,
-#     max_output_tokens=None,
-#     max_tool_calls=None,
-#     previous_response_id=None,
-#     prompt=None,
-#     prompt_cache_key=None,
-#     reasoning=Reasoning(effort=None, generate_summary=None, summary=None),
-#     safety_identifier=None,
-#     service_tier="default",
-#     status="completed",
-#     text=ResponseTextConfig(format=ResponseFormatText(type="text"), verbosity="medium"),
-#     top_logprobs=0,
-#     truncation="disabled",
-#     usage=ResponseUsage(
-#         input_tokens=87,
-#         input_tokens_details=InputTokensDetails(cached_tokens=0),
-#         output_tokens=17,
-#         output_tokens_details=OutputTokensDetails(reasoning_tokens=0),
-#         total_tokens=104,
-#     ),
-#     user=None,
-#     billing={"payer": "developer"},
-#     prompt_cache_retention=None,
-#     store=True,
-# )
-
-
-# Response(
-#     id="resp_0c79117c9e26071600691a6b8491b8819390cd542c051d6eb8",
-#     created_at=1763339140.0,
-#     error=None,
-#     incomplete_details=None,
-#     instructions=None,
-#     metadata={},
-#     model="gpt-4o-mini-2024-07-18",
-#     object="response",
-#     output=[
-#         ResponseOutputMessage(
-#             id="msg_0c79117c9e26071600691a6b8594508193913b51ec8e141d89",
-#             content=[
-#                 ResponseOutputText(
-#                     annotations=[],
-#                     text='{\n    "message_to_user": "You begin to dance, your movements fluid and graceful, drawing the attention of the unsuspecting hare. It hops curiously closer, and your antics startle it into a frenzied dash toward the guards. Their heads snap in the direction of the commotion, giving you a moment of opportunity. What do you wish to do next?",\r\n    "adventure_status": {\r\n        "summary": "You have approached the less traveled path leading towards Stormspire Keep, getting closer to the castle\'s defenses. You spotted two guards patrolling the outer wall, indicating heightened vigilance around the castle. You chose to interact with a nearby hare, using it to create a distraction for the guards.",\r\n        "location": "Narrow path leading to Stormspire Keep",\r\n        "combat_state": false\r\n    }\r\n}',
-#                     type="output_text",
-#                     logprobs=[],
-#                 )
-#             ],
-#             role="assistant",
-#             status="completed",
-#             type="message",
 #         )
 #     ],
 #     parallel_tool_calls=True,
 #     temperature=0.7,
 #     tool_choice="auto",
-#     tools=[],
+#     tools=[
+#         FunctionTool(
+#             name="update_adventure_status",
+#             parameters={
+#                 "type": "object",
+#                 "properties": {
+#                     "summary": {
+#                         "type": "string",
+#                         "description": "An ongoing summary of what the character has done and what has happened in the story so far.",
+#                         "max_length": 1000,
+#                     },
+#                     "location": {
+#                         "type": "string",
+#                         "description": "A short description of the character's current location.",
+#                         "max_length": 100,
+#                     },
+#                     "combat_state": {
+#                         "type": "boolean",
+#                         "description": "True if the character is in combat, false otherwise.",
+#                     },
+#                 },
+#                 "required": ["summary", "location", "combat_state"],
+#                 "additionalProperties": False,
+#             },
+#             strict=True,
+#             type="function",
+#             description="Update the adventure status based on the latest user message. Does not require a followup.",
+#         )
+#     ],
 #     top_p=1.0,
 #     background=False,
 #     conversation=None,
@@ -122,11 +67,11 @@
 #     top_logprobs=0,
 #     truncation="disabled",
 #     usage=ResponseUsage(
-#         input_tokens=1293,
+#         input_tokens=1055,
 #         input_tokens_details=InputTokensDetails(cached_tokens=0),
-#         output_tokens=171,
+#         output_tokens=107,
 #         output_tokens_details=OutputTokensDetails(reasoning_tokens=0),
-#         total_tokens=1464,
+#         total_tokens=1162,
 #     ),
 #     user=None,
 #     billing={"payer": "developer"},

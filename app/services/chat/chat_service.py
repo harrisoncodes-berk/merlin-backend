@@ -2,6 +2,7 @@ import json
 from typing import List, Tuple
 
 from app.adapters.llm.openai_client import OpenAILLM
+from app.domains.adventures import AdventureStatus
 from app.domains.character import Character
 from app.domains.chat import Message, Session
 from app.adapters.llm.types import PromptPayload
@@ -10,6 +11,7 @@ from app.repos.adventure_repo import AdventureRepo
 from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.tools.tools import update_adventure_status
+from app.services.tools.tools_mapping import TOOLS_FOR_LLM
 
 
 class ChatService:
@@ -37,11 +39,7 @@ class ChatService:
         return f"""Greetings, {character_name}! Welcome to {adventure_title}! {story_brief} {starting_status} How do you proceed, adventurer?"""
 
     async def initialize_session(self, user_id: str, character_id: str) -> Session:
-        """
-        Returns an existing active session for the character if available,
-        otherwise creates a new session, seeds the opening assistant message,
-        and commits it.
-        """
+        """Handles chat turn for a new session."""
 
         existing_session = await self.chat_repo.get_session_for_character(
             user_id, character_id
@@ -92,12 +90,22 @@ class ChatService:
         prompt_payload = self._build_prompt_payload(session, chat_history, character, user_text)
 
         try:
-            result_text = await self._call_llm(prompt_payload)
+            response = await self._call_llm(prompt_payload, TOOLS_FOR_LLM)
+            print(response)
 
-            assistant_text = self._extract_message_to_user(result_text)
+            assistant_text = self._extract_message_to_user(response.output_text)
             msg = await self.chat_repo.insert_assistant_message_row(session_id, assistant_text)
 
-            await update_adventure_status(self.chat_repo, session_id, result_text)
+            for item in response.output:
+                if item.type == "function_call":
+                    if item.name == "update_adventure_status":
+                        args = json.loads(item.arguments)
+                        adventure_status = AdventureStatus(
+                            summary=args["summary"],
+                            location=args["location"],
+                            combat_state=args["combat_state"],
+                        )
+                        await update_adventure_status(self.chat_repo, session_id, adventure_status)
 
             await self.chat_repo.db_session.commit()
             
@@ -131,14 +139,15 @@ class ChatService:
             character=character,
         )
 
-    async def _call_llm(self, pruned_payload):
+    async def _call_llm(self, pruned_payload: PromptPayload, tools: list[dict] = None):
         result = await self.llm.generate(
             prompt_payload=pruned_payload,
+            tools=tools,
             temperature=0.7,
             max_tokens=700,
             json_mode=True,
         )
-        return result.text
+        return result
 
     def _extract_message_to_user(self, result_text: str) -> str:
         """Parses the model output and extracts message_to_user, with a safe fallback."""

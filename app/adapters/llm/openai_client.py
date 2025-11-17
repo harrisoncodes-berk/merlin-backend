@@ -1,7 +1,7 @@
 from openai import AsyncOpenAI
 from openai.types.responses import Response
 
-from app.adapters.llm.types import PromptPayload, LLMResult
+from app.adapters.llm.types import PromptPayload
 
 
 class OpenAILLM:
@@ -18,11 +18,11 @@ class OpenAILLM:
     async def generate(
         self,
         prompt_payload: PromptPayload,
+        tools: list[dict] = None,
         temperature: float = 0.7,
         max_tokens: int = 512,
         json_mode: bool = False,
-        timeout_s: int = 30,
-    ) -> LLMResult:
+    ) -> Response:
         input_payload = self._payload_to_input(prompt_payload)
         params = {
             "model": self._model,
@@ -30,8 +30,8 @@ class OpenAILLM:
             "temperature": temperature,
             "max_output_tokens": max_tokens,
         }
-        if prompt_payload.tools:
-            params["tools"] = prompt_payload.tools
+        if tools:
+            params["tools"] = tools
         if json_mode:
             params["text"] = {"format": {"type": "json_object"}}
 
@@ -39,16 +39,8 @@ class OpenAILLM:
             resp = await self._client.responses.create(**params)
         except Exception as e:
             print(e)
-            return LLMResult(
-                text="An error occurred while generating the response.",
-                finish_reason="error",
-                raw={
-                    "error": str(e),
-                },
-            )
-        return LLMResult(
-            text=getattr(resp, "output_text", None) or "no output text",
-        )
+            raise
+        return resp
 
     def _payload_to_input(self, prompt_payload: PromptPayload) -> list[dict]:
         return [
