@@ -10,7 +10,7 @@ from app.api.v1.chat import chat_router
 
 from app.services.observability.trace import trace_middleware
 from app.adapters.llm.base import NoOpLLM
-from app.adapters.llm.openai_adapter import OpenAILLM
+from app.adapters.llm.openai_client import OpenAILLM
 
 
 def create_app() -> FastAPI:
@@ -32,7 +32,6 @@ def create_app() -> FastAPI:
         app.state.llm = OpenAILLM(
             api_key=settings.openai_api_key,
             model=settings.llm_model,
-            default_timeout_s=settings.llm_timeout_seconds,
         )
     else:
         print("Using NoOpLLM")

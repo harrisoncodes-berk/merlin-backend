@@ -1,5 +1,6 @@
 from typing import Protocol
-from .types import PromptPayload, LLMResult
+
+from app.adapters.llm.types import LLMResult, PromptPayload
 
 
 class LLMClient(Protocol):

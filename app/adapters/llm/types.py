@@ -1,10 +1,11 @@
-from typing import List, Optional, Dict
+from typing import Optional, Dict
 from pydantic import BaseModel, Field
 
 
 class PromptPayload(BaseModel):
-    system_messages: List[str] = Field(default_factory=list)
-    user_messages: List[str] = Field(default_factory=list)
+    system_messages: list[str]
+    user_messages: list[str]
+    tools: list[dict] | None = None
 
 
 class LLMResult(BaseModel):
