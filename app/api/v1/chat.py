@@ -111,7 +111,6 @@ async def history(
 
 @chat_router.post("/sessions/{session_id}/message", response_model=MessageOut)
 async def send_message(
-    request: Request,
     session_id: str,
     payload: SendMessageIn,
     user_id: str = Depends(require_user_id),
@@ -122,10 +121,10 @@ async def send_message(
             user_id=user_id,
             session_id=session_id,
             user_text=payload.message,
-            trace_id=getattr(request.state, "trace_id", None),
         )
         return MessageOut.model_validate(msg)
     except Exception as e:
+        print(e)
         raise HTTPException(
             status_code=500, detail=f"LLM generation failed: {type(e).__name__}: {e}"
         )
