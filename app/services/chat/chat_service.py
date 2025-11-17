@@ -2,7 +2,7 @@ import json
 import time
 from typing import List, Optional, Tuple
 
-from app.adapters.llm.base import LLMClient
+from app.adapters.llm.openai_client import OpenAILLM
 from app.domains.adventures import AdventureStatus
 from app.domains.character import Character
 from app.domains.chat import Message, Session
@@ -31,7 +31,7 @@ class ChatService:
     def __init__(
         self,
         *,
-        llm: LLMClient,
+        llm: OpenAILLM,
         adventure_repo: AdventureRepo,
         character_repo: CharacterRepo,
         chat_repo: ChatRepo,

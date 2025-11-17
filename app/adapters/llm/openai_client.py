@@ -1,11 +1,10 @@
 from openai import AsyncOpenAI
 from openai.types.responses import Response
 
-from app.adapters.llm.base import LLMClient
 from app.adapters.llm.types import PromptPayload, LLMResult
 
 
-class OpenAILLM(LLMClient):
+class OpenAILLM:
     def __init__(self, api_key: str, model: str):
         self._model = model
         self._client = AsyncOpenAI(api_key=api_key)
@@ -38,7 +37,6 @@ class OpenAILLM(LLMClient):
 
         try:
             resp = await self._client.responses.create(**params)
-            print(resp)
         except Exception as e:
             print(e)
             return LLMResult(

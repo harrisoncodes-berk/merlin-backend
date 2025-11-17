@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
 
-from app.adapters.llm.base import LLMClient
+from app.adapters.llm.openai_client import OpenAILLM
 from app.adapters.db import get_db_session
 from app.dependencies.auth import require_user_id
 from app.schemas.chat import (
@@ -21,7 +21,7 @@ from app.services.chat.chat_service import ChatService
 chat_router = APIRouter(prefix="/chat", tags=["chat"])
 
 
-def get_llm(request: Request) -> LLMClient:
+def get_llm(request: Request) -> OpenAILLM:
     return request.app.state.llm
 
 
@@ -44,7 +44,7 @@ def get_chat_repo(
 
 
 def get_chat_service(
-    llm: LLMClient = Depends(get_llm),
+    llm: OpenAILLM = Depends(get_llm),
     adventure_repo: AdventureRepo = Depends(get_adventure_repo),
     character_repo: CharacterRepo = Depends(get_character_repo),
     chat_repo: ChatRepo = Depends(get_chat_repo),
