@@ -1,10 +1,6 @@
-from app.services.tools.tools import update_adventure_status, roll_dice, skill_check
+from app.services.tools.tools import roll_dice, skill_check
 
 TOOLS_TO_FUNCTIONS = {
-    "update_adventure_status": {
-        "function": update_adventure_status,
-        "async": True,
-    },
     "roll_dice": {
         "function": roll_dice,
         "async": False,

@@ -1,8 +1,6 @@
-import json
 from typing import List, Tuple
 
 from app.adapters.llm.openai_client import OpenAILLM
-from app.domains.adventures import AdventureStatus
 from app.domains.character import Character
 from app.domains.chat import Message, Session
 from app.adapters.llm.types import PromptPayload
@@ -10,8 +8,8 @@ from app.services.orchestration.prompt_builder import PromptBuilder
 from app.repos.adventure_repo import AdventureRepo
 from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
-from app.services.tools.tools import update_adventure_status
-from app.services.tools.tools_mapping import TOOLS_FOR_LLM
+from app.services.dm_response.dm_response_handlers import update_adventure_status
+from app.services.dm_response.dm_response_models import DMResponse
 
 
 class ChatService:
@@ -87,31 +85,23 @@ class ChatService:
 
         session, chat_history, character = await self._load_context(user_id, session_id)
 
-        prompt_payload = self._build_prompt_payload(session, chat_history, character, user_text)
+        prompt_payload = self._build_prompt_payload(
+            session, chat_history, character, user_text
+        )
 
         try:
-            response = await self._call_llm(prompt_payload, TOOLS_FOR_LLM)
-            print(response)
+            response = await self._call_llm(prompt_payload)
 
-            assistant_text = self._extract_message_to_user(response.output_text)
-            msg = await self.chat_repo.insert_assistant_message_row(session_id, assistant_text)
+            # Check for tool calls -> call tools and add to prompt payload
 
-            for item in response.output:
-                if item.type == "function_call":
-                    if item.name == "update_adventure_status":
-                        args = json.loads(item.arguments)
-                        adventure_status = AdventureStatus(
-                            summary=args["summary"],
-                            location=args["location"],
-                            combat_state=args["combat_state"],
-                        )
-                        await update_adventure_status(self.chat_repo, session_id, adventure_status)
+            msg = await self._handle_dm_response(response, session_id)
 
             await self.chat_repo.db_session.commit()
-            
+
             return msg
         except Exception as e:
             print(e)
+            await self.chat_repo.db_session.rollback()
             raise
 
     async def _load_context(
@@ -127,7 +117,11 @@ class ChatService:
         return session, chat_history, character
 
     def _build_prompt_payload(
-        self, session: Session, chat_history: List[Message], character: Character, user_text: str
+        self,
+        session: Session,
+        chat_history: List[Message],
+        character: Character,
+        user_text: str,
     ) -> PromptPayload:
         """Builds the prompt payload for the given session, chat history, character, and user text."""
         builder = PromptBuilder()
@@ -145,17 +139,20 @@ class ChatService:
             tools=tools,
             temperature=0.7,
             max_tokens=700,
-            json_mode=True,
+            output_schema=DMResponse,
         )
         return result
 
-    def _extract_message_to_user(self, result_text: str) -> str:
-        """Parses the model output and extracts message_to_user, with a safe fallback."""
-        try:
-            data = json.loads(result_text)
-            mt = data.get("message_to_user")
-            if isinstance(mt, str) and mt.strip():
-                return mt.strip()
-        except Exception:
-            pass
-        return result_text
+    async def _handle_dm_response(self, dm_response_str: str, session_id: str) -> str:
+        """Handles the DM response by inserting the message to user and updating the adventure status."""
+        dm_response = DMResponse.model_validate_json(dm_response_str)
+
+        message_to_user = dm_response.message_to_user
+        msg = await self.chat_repo.insert_assistant_message_row(
+            session_id, message_to_user
+        )
+
+        adventure_status = dm_response.update_adventure_status
+        await update_adventure_status(self.chat_repo, session_id, adventure_status)
+
+        return msg

@@ -15,6 +15,6 @@ class UpdateHealth(BaseModel):
 
 class DMResponse(BaseModel):
     message_to_user: str
-    update_adventure_status: UpdateAdventureStatus | None = None
-    update_inventory: UpdateInventory | None = None
-    update_health: UpdateHealth | None = None
+    update_adventure_status: UpdateAdventureStatus
+    # update_inventory: UpdateInventory | None = None
+    # update_health: UpdateHealth | None = None
