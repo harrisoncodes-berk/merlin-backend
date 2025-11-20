@@ -52,9 +52,15 @@ class OpenAILLM:
 
 
 def _payload_to_input(prompt_payload: PromptPayload) -> list[dict]:
-    return [_format_input_msg("system", s) for s in prompt_payload.system_messages] + [
-        _format_input_msg("user", u) for u in prompt_payload.user_messages
-    ]
+    return (
+        [_format_input_msg("system", s) for s in prompt_payload.system_messages]
+        + [_format_input_msg("user", u) for u in prompt_payload.user_messages]
+        + (
+            [_format_input_msg("tool", t) for t in prompt_payload.tool_results]
+            if prompt_payload.tool_results
+            else []
+        )
+    )
 
 
 def _format_input_msg(role: str, content: str) -> dict:

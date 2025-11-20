@@ -1,3 +1,4 @@
+import json
 from typing import List, Tuple
 
 from app.adapters.llm.openai_client import OpenAILLM
@@ -10,6 +11,8 @@ from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_handlers import update_adventure_status
 from app.services.dm_response.dm_response_models import DMResponse
+from app.services.tools.tools import ability_check
+from app.services.tools.tools_mapping import TOOLS_FOR_LLM
 
 
 class ChatService:
@@ -90,11 +93,17 @@ class ChatService:
         )
 
         try:
-            response = await self._call_llm(prompt_payload)
+            response = await self._call_llm(prompt_payload, tools=TOOLS_FOR_LLM)
+            print('RESPONSE', response)
 
-            # Check for tool calls -> call tools and add to prompt payload
+            for item in response.output:
+                if item.type == "function_call":
+                    if item.name == "ability_check":
+                        print('ITEM', item)
+                        print(json.loads(item.arguments))
+                        print(type(json.loads(item.arguments)))
 
-            msg = await self._handle_dm_response(response, session_id)
+            msg = await self._handle_dm_response(response.output_text, session_id)
 
             await self.chat_repo.db_session.commit()
 

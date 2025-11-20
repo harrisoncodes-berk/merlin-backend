@@ -1,40 +1,33 @@
-from app.services.tools.tools import roll_dice, skill_check
+from app.services.tools.tools import ability_check
 
 TOOLS_TO_FUNCTIONS = {
-    "roll_dice": {
-        "function": roll_dice,
-        "async": False,
-    },
-    "skill_check": {
-        "function": skill_check,
-        "async": False,
-    },
+    "ability_check": ability_check,
 }
 
 TOOLS_FOR_LLM = [
     {
         "type": "function",
-        "name": "update_adventure_status",
-        "description": "Update the adventure status based on the latest user message. Does not require a followup.",
+        "name": "ability_check",
+        "description": "If the user attempts something that could fail and have a meaningful consequence, use this tool to check if the character succeeds.",
         "parameters": {
             "type": "object",
             "properties": {
-                "summary": {
+                "difficulty": {
+                    "type": "integer",
+                    "description": "The difficulty of the ability check based on the task at hand.",
+                },
+                "ability": {
                     "type": "string",
-                    "description": "An ongoing summary of what the character has done and what has happened in the story so far.",
-                    "max_length": 1000,
+                    "description": "The ability to use for the check.",
+                    "enum": ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"],
                 },
-                "location": {
+                "skill": {
                     "type": "string",
-                    "description": "A short description of the character's current location.",
-                    "max_length": 100,
-                },
-                "combat_state": {
-                    "type": "boolean",
-                    "description": "True if the character is in combat, false otherwise.",
-                },
+                    "description": "The skill to use for the check. If no skill is relevant, use 'none'.",
+                    "enum": ["acrobatics", "animalHandling", "arcana", "athletics", "deception", "history", "insight", "intimidation", "investigation", "medicine", "nature", "perception", "performance", "persuasion", "religion", "sleightOfHand", "stealth", "survival", "none"],
+                }
             },
-            "required": ["summary", "location", "combat_state"],
+            "required": ["difficulty", "ability", "skill"],
         },
     },
 ]
