@@ -7,14 +7,21 @@ class InputMessage(BaseModel):
     content: str
 
 
-class ToolOutput(BaseModel):
+class FunctionCall(BaseModel):
+    call_id: str
+    name: str
+    arguments: str
+    type: Literal["function_call"] = "function_call"
+
+
+class FunctionCallOutput(BaseModel):
     call_id: str
     output: str
     type: Literal["function_call_output"] = "function_call_output"
 
 
 class PromptPayload(BaseModel):
-    messages: list[InputMessage | ToolOutput]
+    messages: list[InputMessage | FunctionCall | FunctionCallOutput]
 
 
 class LLMResult(BaseModel):

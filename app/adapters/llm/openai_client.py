@@ -16,13 +16,14 @@ class OpenAILLM:
     def model(self) -> str:
         return self._model
 
+    # TODO: Return custom LLMResult type instead of Response
     async def generate(
         self,
         prompt_payload: PromptPayload,
         tools: list[dict] = None,
+        output_schema: BaseModel = None,
         temperature: float = 0.7,
         max_tokens: int = 512,
-        output_schema: BaseModel = None,
     ) -> Response:
         input_payload = prompt_payload.model_dump_json()
         params = {
@@ -42,7 +43,6 @@ class OpenAILLM:
                     "schema": _base_model_to_json_schema(output_schema),
                 },
             }
-        print("PARAMS:", params)
 
         try:
             resp = await self._client.responses.create(**params)

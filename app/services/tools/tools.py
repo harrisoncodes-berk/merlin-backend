@@ -1,6 +1,7 @@
 import random
 
-from app.domains.character_common import Skill
+from app.domains.character_common import AbilityNameToKey, Skill
+from app.domains.character import Character
 
 
 def roll_dice(sides: int) -> int:
@@ -15,22 +16,29 @@ def roll_dice(sides: int) -> int:
     return random.randint(1, sides)
 
 
-def ability_check(difficulty: int, ability_score: int, skill: Skill) -> bool:
+def ability_check(
+    character: Character, difficulty: int, ability: str, skill: str
+) -> str:
     """Checks if an action is successful with the given difficulty, ability modifier, and skill modifier.
 
     Args:
         difficulty: The difficulty of the action.
-        ability_score: The ability score to use for the check.
+        ability: The ability to use for the check.
         skill: The skill to use for the check.
 
     Returns:
-        True if the action is successful, False otherwise.
+        A message describing the result of the check.
     """
-    return (
+    ability_score = getattr(character.abilities, AbilityNameToKey[ability])
+    skill_obj = next((s for s in character.skills if s.key == skill), None)
+    successful = (
         roll_dice(20)
         + calculate_ability_modifier(ability_score)
-        + calculate_skill_modifier(skill)
+        + calculate_skill_modifier(skill_obj)
     ) >= difficulty
+    if successful:
+        return "The action was successful."
+    return "The action was not successful."
 
 
 def calculate_ability_modifier(ability_score: int) -> int:

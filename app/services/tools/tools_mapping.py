@@ -4,6 +4,7 @@ TOOLS_TO_FUNCTIONS = {
     "ability_check": ability_check,
 }
 
+# TODO: Add support for multiple ability checks in the same turn.
 TOOLS_FOR_LLM = [
     {
         "type": "function",

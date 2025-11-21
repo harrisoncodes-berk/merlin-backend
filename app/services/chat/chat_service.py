@@ -1,8 +1,11 @@
 import json
 from typing import List, Tuple
+from openai.types.responses import Response
+from pydantic import BaseModel
 
 from app.adapters.llm.openai_client import OpenAILLM
 from app.domains.character import Character
+from app.domains.adventures import AdventureStatus
 from app.domains.chat import Message, Session
 from app.adapters.llm.types import PromptPayload
 from app.services.orchestration.prompt_builder import PromptBuilder
@@ -11,6 +14,7 @@ from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_handlers import update_adventure_status
 from app.services.dm_response.dm_response_models import DMResponse
+from app.services.tools.tools import ability_check
 from app.services.tools.tools_mapping import TOOLS_FOR_LLM
 
 
@@ -77,7 +81,6 @@ class ChatService:
 
     async def handle_turn(
         self,
-        *,
         user_id: str,
         session_id: str,
         user_text: str,
@@ -87,20 +90,39 @@ class ChatService:
 
         session, chat_history, character = await self._load_context(user_id, session_id)
 
-        prompt_payload = self._build_prompt_payload(session, character, chat_history)
+        prompt_builder = PromptBuilder(
+            story_brief=session.story_brief,
+            character=character,
+            adventure_status=session.adventure_status,
+            chat_history=chat_history,
+        )
+        prompt_payload = prompt_builder.prompt_payload
 
         try:
             response = await self._call_llm(prompt_payload, tools=TOOLS_FOR_LLM)
-            print("RESPONSE:", response)
 
             for item in response.output:
                 if item.type == "function_call":
                     if item.name == "ability_check":
-                        print("ITEM", item)
-                        print(json.loads(item.arguments))
-                        print(type(json.loads(item.arguments)))
+                        args = json.loads(item.arguments)
+                        call_id = item.call_id
+                        output = ability_check(character, **json.loads(item.arguments))
+                        prompt_builder.add_function_call_messages(
+                            call_id=call_id,
+                            name=item.name,
+                            arguments=args,
+                            output=output,
+                        )
 
-            msg = await self._handle_dm_response(response.output_text, session_id)
+            follow_up_prompt = prompt_builder.prompt_payload
+
+            follow_up_response = await self._call_llm(
+                follow_up_prompt, output_schema=DMResponse
+            )
+
+            msg = await self._handle_dm_response(
+                follow_up_response.output_text, session_id
+            )
 
             await self.chat_repo.db_session.commit()
 
@@ -122,28 +144,18 @@ class ChatService:
         )
         return session, chat_history, character
 
-    def _build_prompt_payload(
+    async def _call_llm(
         self,
-        session: Session,
-        character: Character,
-        chat_history: List[Message],
-    ) -> PromptPayload:
-        """Builds the prompt payload for the given session, chat history, character, and user text."""
-        builder = PromptBuilder(
-            story_brief=session.story_brief,
-            character=character,
-            adventure_status=session.adventure_status,
-            chat_history=chat_history,
-        )
-        return builder.prompt_payload
-
-    async def _call_llm(self, pruned_payload: PromptPayload, tools: list[dict] = None):
+        pruned_payload: PromptPayload,
+        tools: list[dict] = None,
+        output_schema: BaseModel = None,
+    ) -> Response:
         result = await self.llm.generate(
             prompt_payload=pruned_payload,
             tools=tools,
+            output_schema=output_schema,
             temperature=0.7,
             max_tokens=700,
-            output_schema=None,
         )
         return result
 
@@ -156,7 +168,11 @@ class ChatService:
             session_id, message_to_user
         )
 
-        adventure_status = dm_response.update_adventure_status
+        adventure_status = AdventureStatus(
+            summary=dm_response.update_adventure_status.summary,
+            location=dm_response.update_adventure_status.location,
+            combat_state=dm_response.update_adventure_status.combat_state,
+        )
         await update_adventure_status(self.chat_repo, session_id, adventure_status)
 
         return msg

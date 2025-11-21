@@ -1,9 +1,15 @@
+import json
 from typing import List
 
 from app.domains.adventures import AdventureStatus
 from app.domains.character import Character
 from app.domains.chat import Message
-from app.adapters.llm.types import InputMessage, PromptPayload, ToolOutput
+from app.adapters.llm.types import (
+    FunctionCall,
+    FunctionCallOutput,
+    InputMessage,
+    PromptPayload,
+)
 
 STANDARD_RULES_PROMPT = """
 You are Merlin, a Dungeon Master guiding a Dungeons & Dragons adventure. Speak from the DM’s perspective and keep narration immersive but concise.
@@ -52,6 +58,16 @@ class PromptBuilder:
             ]
             + chat_history,
         )
+
+    def add_function_call_messages(
+        self, call_id: str, name: str, arguments: dict, output: bool
+    ):
+        function_call = FunctionCall(
+            call_id=call_id, name=name, arguments=json.dumps(arguments)
+        )
+        function_call_output = FunctionCallOutput(call_id=call_id, output=output)
+        self.prompt_payload.messages.append(function_call)
+        self.prompt_payload.messages.append(function_call_output)
 
     def _render_adventure_status(self) -> str:
         return (
