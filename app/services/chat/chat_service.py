@@ -11,7 +11,6 @@ from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_handlers import update_adventure_status
 from app.services.dm_response.dm_response_models import DMResponse
-from app.services.tools.tools import ability_check
 from app.services.tools.tools_mapping import TOOLS_FOR_LLM
 
 
@@ -88,18 +87,16 @@ class ChatService:
 
         session, chat_history, character = await self._load_context(user_id, session_id)
 
-        prompt_payload = self._build_prompt_payload(
-            session, chat_history, character, user_text
-        )
+        prompt_payload = self._build_prompt_payload(session, character, chat_history)
 
         try:
             response = await self._call_llm(prompt_payload, tools=TOOLS_FOR_LLM)
-            print('RESPONSE', response)
+            print("RESPONSE:", response)
 
             for item in response.output:
                 if item.type == "function_call":
                     if item.name == "ability_check":
-                        print('ITEM', item)
+                        print("ITEM", item)
                         print(json.loads(item.arguments))
                         print(type(json.loads(item.arguments)))
 
@@ -128,19 +125,17 @@ class ChatService:
     def _build_prompt_payload(
         self,
         session: Session,
-        chat_history: List[Message],
         character: Character,
-        user_text: str,
+        chat_history: List[Message],
     ) -> PromptPayload:
         """Builds the prompt payload for the given session, chat history, character, and user text."""
-        builder = PromptBuilder()
-        return builder.build_standard_prompt(
+        builder = PromptBuilder(
             story_brief=session.story_brief,
+            character=character,
             adventure_status=session.adventure_status,
             chat_history=chat_history,
-            user_message=user_text,
-            character=character,
         )
+        return builder.prompt_payload
 
     async def _call_llm(self, pruned_payload: PromptPayload, tools: list[dict] = None):
         result = await self.llm.generate(
@@ -148,7 +143,7 @@ class ChatService:
             tools=tools,
             temperature=0.7,
             max_tokens=700,
-            output_schema=DMResponse,
+            output_schema=None,
         )
         return result
 

@@ -1,11 +1,20 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Literal
 from pydantic import BaseModel, Field
 
 
+class InputMessage(BaseModel):
+    role: Literal["system", "user", "assistant", "tool"]
+    content: str
+
+
+class ToolOutput(BaseModel):
+    call_id: str
+    output: str
+    type: Literal["function_call_output"] = "function_call_output"
+
+
 class PromptPayload(BaseModel):
-    system_messages: list[str]
-    user_messages: list[str]
-    tool_results: list[dict] | None = None
+    messages: list[InputMessage | ToolOutput]
 
 
 class LLMResult(BaseModel):
