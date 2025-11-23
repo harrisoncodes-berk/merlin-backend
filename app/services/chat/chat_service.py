@@ -1,7 +1,6 @@
 import json
 from typing import List, Tuple
 from openai.types.responses import Response
-from pydantic import BaseModel
 
 from app.adapters.llm.openai_client import OpenAILLM
 from app.domains.character import Character
