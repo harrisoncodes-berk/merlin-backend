@@ -13,7 +13,7 @@ from app.repos.adventure_repo import AdventureRepo
 from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_handlers import update_adventure_status
-from app.services.dm_response.dm_response_models import DMResponse
+from app.services.dm_response.dm_response_models import DMResponse, DM_RESPONSE_SCHEMA
 from app.services.tools.tools import ability_check
 from app.services.tools.tools_mapping import TOOLS_FOR_LLM
 
@@ -117,7 +117,7 @@ class ChatService:
             follow_up_prompt = prompt_builder.prompt_payload
 
             follow_up_response = await self._call_llm(
-                follow_up_prompt, output_schema=DMResponse
+                follow_up_prompt, output_schema=DM_RESPONSE_SCHEMA
             )
 
             msg = await self._handle_dm_response(
@@ -148,7 +148,7 @@ class ChatService:
         self,
         pruned_payload: PromptPayload,
         tools: list[dict] = None,
-        output_schema: BaseModel = None,
+        output_schema: dict = None,
     ) -> Response:
         result = await self.llm.generate(
             prompt_payload=pruned_payload,

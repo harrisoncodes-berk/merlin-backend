@@ -21,7 +21,7 @@ class OpenAILLM:
         self,
         prompt_payload: PromptPayload,
         tools: list[dict] = None,
-        output_schema: BaseModel = None,
+        output_schema: dict = None,
         temperature: float = 0.7,
         max_tokens: int = 512,
     ) -> Response:
@@ -35,14 +35,7 @@ class OpenAILLM:
         if tools:
             params["tools"] = tools
         if output_schema:
-            params["text"] = {
-                "format": {
-                    "type": "json_schema",
-                    "name": output_schema.__name__,
-                    "strict": True,
-                    "schema": _base_model_to_json_schema(output_schema),
-                },
-            }
+            params["text"] = output_schema
 
         try:
             resp = await self._client.responses.create(**params)
