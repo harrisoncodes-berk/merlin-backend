@@ -36,9 +36,11 @@ class OpenAILLM:
             params["tools"] = tools
         if output_schema:
             params["text"] = output_schema
+        print("PARAMS: ", params)
 
         try:
             resp = await self._client.responses.create(**params)
+            print("RESP: ", resp)
         except Exception as e:
             print(e)
             raise

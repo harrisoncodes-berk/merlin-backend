@@ -73,13 +73,20 @@ class PromptBuilder:
         return (
             f"Summary: {self.adventure_status.summary}\n"
             f"Location: {self.adventure_status.location}\n"
-            f"Combat State: {self.adventure_status.combat_state}"
+            f"Combat State: {self.adventure_status.combat_state}\n"
         )
 
     def _render_character(self) -> str:
+        rendered_inventory = "\n".join(
+            [
+                f"item_id: {item.id} - name: {item.name} - quantity: {item.quantity} - weight: {item.weight} - description: {item.description}"
+                for item in self.character.inventory
+            ]
+        )
         return (
             f"Name: {self.character.name}\n"
             f"Race: {self.character.race} | Class: {self.character.class_name} | Background: {self.character.background}\n"
+            f"Inventory: {rendered_inventory}\n"
         )
 
     def _render_chat_history(self) -> list[InputMessage]:

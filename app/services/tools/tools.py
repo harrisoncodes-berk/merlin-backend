@@ -46,9 +46,9 @@ def calculate_ability_modifier(ability_score: int) -> int:
 
 
 def calculate_skill_modifier(skill: Skill) -> int:
-    if skill.expertise:
+    if getattr(skill, "expertise", False):
         return 4
-    elif skill.proficient:
+    elif getattr(skill, "proficient", False):
         return 2
     else:
         return 0

@@ -11,7 +11,11 @@ from app.services.orchestration.prompt_builder import PromptBuilder
 from app.repos.adventure_repo import AdventureRepo
 from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
-from app.services.dm_response.dm_response_handlers import update_adventure_status
+from app.services.dm_response.dm_response_handlers import (
+    add_item_to_inventory,
+    remove_item_from_inventory,
+    update_adventure_status,
+)
 from app.services.dm_response.dm_response_models import DMResponse, DM_RESPONSE_SCHEMA
 from app.services.tools.tools import ability_check
 from app.services.tools.tools_mapping import TOOLS_FOR_LLM
@@ -120,7 +124,7 @@ class ChatService:
             )
 
             msg = await self._handle_dm_response(
-                follow_up_response.output_text, session_id
+                follow_up_response.output_text, character, session_id
             )
 
             await self.chat_repo.db_session.commit()
@@ -158,7 +162,9 @@ class ChatService:
         )
         return result
 
-    async def _handle_dm_response(self, dm_response_str: str, session_id: str) -> str:
+    async def _handle_dm_response(
+        self, dm_response_str: str, character: Character, session_id: str
+    ) -> str:
         """Handles the DM response by inserting the message to user and updating the adventure status."""
         dm_response = DMResponse.model_validate_json(dm_response_str)
 
@@ -173,5 +179,14 @@ class ChatService:
             combat_state=dm_response.update_adventure_status.combat_state,
         )
         await update_adventure_status(self.chat_repo, session_id, adventure_status)
+
+        if dm_response.add_item_to_inventory:
+            await add_item_to_inventory(
+                self.character_repo, character, dm_response.add_item_to_inventory
+            )
+        if dm_response.remove_item_from_inventory:
+            await remove_item_from_inventory(
+                self.character_repo, character, dm_response.remove_item_from_inventory
+            )
 
         return msg

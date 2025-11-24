@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Optional
 
 from sqlalchemy import select, update
@@ -90,7 +91,8 @@ class CharacterRepo:
             )
             .join(chat_sessions, characters.c.id == chat_sessions.c.character_id)
             .where(
-                (chat_sessions.c.session_id == session_id) & (characters.c.user_id == user_id)
+                (chat_sessions.c.session_id == session_id)
+                & (characters.c.user_id == user_id)
             )
             .limit(1)
         )
@@ -98,17 +100,21 @@ class CharacterRepo:
         row = res.mappings().first()
         return _row_to_character(row) if row else None
 
-    async def update_character_inventory(self, character_id: str, inventory: list[Item]) -> None:
+    async def update_character_inventory(
+        self, character_id: str, inventory: list[Item]
+    ) -> None:
+        inventory_dict = [asdict(item) for item in inventory]
         stmt = (
             update(characters)
             .where(characters.c.id == character_id)
-            .values(inventory=inventory)
+            .values(inventory=inventory_dict)
         )
         try:
             await self.db_session.execute(stmt)
         except Exception as e:
             print(f"Error updating character inventory: {e}")
             raise
+
 
 def _row_to_character(row: dict) -> Character:
     return Character(
@@ -126,5 +132,7 @@ def _row_to_character(row: dict) -> Character:
         skills=[Skill(**skill) for skill in row["skills"]],
         features=[Feature(**feature) for feature in row["features"]],
         inventory=[Item(**item) for item in row["inventory"]],
-        spellcasting=Spellcasting(**row["spellcasting"]) if row["spellcasting"] else None,
+        spellcasting=Spellcasting(**row["spellcasting"])
+        if row["spellcasting"]
+        else None,
     )

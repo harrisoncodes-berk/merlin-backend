@@ -67,7 +67,7 @@ DM_RESPONSE_SCHEMA = {
                 },
                 "add_item_to_inventory": {
                     "type": ["object", "null"],
-                    "description": "Adds an item to the character's inventory.",
+                    "description": "Use to add an item to the character's inventory when the user gains an item.",
                     "properties": {
                         "item_id": {
                             "type": "string",
@@ -101,7 +101,7 @@ DM_RESPONSE_SCHEMA = {
                 },
                 "remove_item_from_inventory": {
                     "type": ["object", "null"],
-                    "description": "Removes an item from the character's inventory.",
+                    "description": "Use to remove an item from the character's inventory when the user loses an item.",
                     "properties": {
                         "item_id": {
                             "type": "string",
