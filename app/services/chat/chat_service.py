@@ -13,7 +13,7 @@ from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_handlers import (
     add_items_to_inventory,
-    remove_item_from_inventory,
+    remove_items_from_inventory,
     update_adventure_status,
 )
 from app.services.dm_response.dm_response_models import DMResponse, DM_RESPONSE_SCHEMA
@@ -184,9 +184,9 @@ class ChatService:
             await add_items_to_inventory(
                 self.character_repo, character, dm_response.add_items_to_inventory
             )
-        if dm_response.remove_item_from_inventory:
-            await remove_item_from_inventory(
-                self.character_repo, character, dm_response.remove_item_from_inventory
+        if dm_response.remove_items_from_inventory:
+            await remove_items_from_inventory(
+                self.character_repo, character, dm_response.remove_items_from_inventory
             )
 
         return msg

@@ -13,9 +13,8 @@ class AddItemsToInventory(BaseModel):
     items: list[ItemOut]
 
 
-class RemoveItemFromInventory(BaseModel):
-    item_id: str
-    quantity: int
+class RemoveItemsFromInventory(BaseModel):
+    items: list[dict]
 
 
 class UpdateHealth(BaseModel):
@@ -27,7 +26,7 @@ class DMResponse(BaseModel):
     message_to_user: str
     update_adventure_status: UpdateAdventureStatus
     add_items_to_inventory: AddItemsToInventory | None = None
-    remove_item_from_inventory: RemoveItemFromInventory | None = None
+    remove_items_from_inventory: RemoveItemsFromInventory | None = None
     # update_health: UpdateHealth | None = None
 
 
@@ -108,20 +107,31 @@ DM_RESPONSE_SCHEMA = {
                     "required": ["items"],
                     "additionalProperties": False,
                 },
-                "remove_item_from_inventory": {
+                "remove_items_from_inventory": {
                     "type": ["object", "null"],
                     "description": "Use to remove an item from the character's inventory when the user loses an item.",
                     "properties": {
-                        "item_id": {
-                            "type": "string",
-                            "description": "The ID of the item to remove from the inventory.",
-                        },
-                        "quantity": {
-                            "type": "integer",
-                            "description": "The quantity of the item to remove from the inventory.",
+                        "items": {
+                            "type": "array",
+                            "description": "The items to remove from the inventory.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "description": "The ID of the item to remove from the inventory.",
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "description": "The quantity of the item to remove from the inventory.",
+                                    },
+                                },
+                                "required": ["id", "quantity"],
+                                "additionalProperties": False,
+                            },
                         },
                     },
-                    "required": ["item_id", "quantity"],
+                    "required": ["items"],
                     "additionalProperties": False,
                 },
             },
@@ -130,7 +140,7 @@ DM_RESPONSE_SCHEMA = {
                 "message_to_user",
                 "update_adventure_status",
                 "add_items_to_inventory",
-                "remove_item_from_inventory",
+                "remove_items_from_inventory",
             ],
         },
     }

@@ -5,7 +5,7 @@ from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_models import (
     AddItemsToInventory,
-    RemoveItemFromInventory,
+    RemoveItemsFromInventory,
 )
 
 
@@ -48,21 +48,21 @@ async def add_items_to_inventory(
     await character_repo.update_character_inventory(character.id, updated_inventory)
 
 
-async def remove_item_from_inventory(
+async def remove_items_from_inventory(
     character_repo: CharacterRepo,
     character: Character,
-    remove_item_from_inventory: RemoveItemFromInventory,
+    remove_items_from_inventory: RemoveItemsFromInventory,
 ):
-    """Removes an item from the character's inventory.
+    """Removes items from the character's inventory.
 
     Args:
-        character_repo: The character repository to remove the item from the inventory.
-        character: The character to remove the item from the inventory for.
-        remove_item_from_inventory: The item to remove from the inventory.
+        character_repo: The character repository to remove the items from the inventory.
+        character: The character to remove the items from the inventory for.
+        remove_items_from_inventory: The items to remove from the inventory.
     """
     updated_inventory = [
         item
         for item in character.inventory
-        if item.id != remove_item_from_inventory.item_id
+        if item.id not in remove_items_from_inventory.items
     ]
     await character_repo.update_character_inventory(character.id, updated_inventory)
