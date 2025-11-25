@@ -86,7 +86,7 @@ class PromptBuilder:
         return (
             f"Name: {self.character.name}\n"
             f"Race: {self.character.race} | Class: {self.character.class_name} | Background: {self.character.background}\n"
-            f"Inventory: {rendered_inventory}\n"
+            f"Inventory:\n{rendered_inventory}\n"
         )
 
     def _render_chat_history(self) -> list[InputMessage]:

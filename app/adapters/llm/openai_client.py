@@ -1,3 +1,4 @@
+import json
 from openai import AsyncOpenAI
 from openai.types.responses import Response
 from pydantic import BaseModel
@@ -36,11 +37,11 @@ class OpenAILLM:
             params["tools"] = tools
         if output_schema:
             params["text"] = output_schema
-        print("PARAMS: ", params)
+        print("Input: ", json.loads(input_payload))
 
         try:
             resp = await self._client.responses.create(**params)
-            print("RESP: ", resp)
+            print("Response: ", resp.output_text)
         except Exception as e:
             print(e)
             raise

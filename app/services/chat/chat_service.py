@@ -12,7 +12,7 @@ from app.repos.adventure_repo import AdventureRepo
 from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_handlers import (
-    add_item_to_inventory,
+    add_items_to_inventory,
     remove_item_from_inventory,
     update_adventure_status,
 )
@@ -180,9 +180,9 @@ class ChatService:
         )
         await update_adventure_status(self.chat_repo, session_id, adventure_status)
 
-        if dm_response.add_item_to_inventory:
-            await add_item_to_inventory(
-                self.character_repo, character, dm_response.add_item_to_inventory
+        if dm_response.add_items_to_inventory:
+            await add_items_to_inventory(
+                self.character_repo, character, dm_response.add_items_to_inventory
             )
         if dm_response.remove_item_from_inventory:
             await remove_item_from_inventory(

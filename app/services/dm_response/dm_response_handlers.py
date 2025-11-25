@@ -4,7 +4,7 @@ from app.domains.character_common import Item
 from app.repos.character_repo import CharacterRepo
 from app.repos.chat_repo import ChatRepo
 from app.services.dm_response.dm_response_models import (
-    AddItemToInventory,
+    AddItemsToInventory,
     RemoveItemFromInventory,
 )
 
@@ -22,27 +22,31 @@ async def update_adventure_status(
     await chat_repo.update_session_adventure_status(session_id, adventure_status)
 
 
-async def add_item_to_inventory(
+async def add_items_to_inventory(
     character_repo: CharacterRepo,
     character: Character,
-    add_item_to_inventory: AddItemToInventory,
+    add_items_to_inventory: AddItemsToInventory,
 ):
-    """Adds an item to the character's inventory.
+    """Adds items to the character's inventory.
 
     Args:
-        character_repo: The character repository to add the item to the inventory.
-        character: The character to add the item to the inventory for.
-        add_item_to_inventory: The item to add to the inventory.
+        character_repo: The character repository to add the items to the inventory.
+        character: The character to add the items to the inventory for.
+        add_items_to_inventory: The items to add to the inventory.
     """
-    item = Item(
-        id=add_item_to_inventory.item_id,
-        name=add_item_to_inventory.name,
-        quantity=add_item_to_inventory.quantity,
-        weight=add_item_to_inventory.weight,
-        description=add_item_to_inventory.description,
-    )
-    updated_inventory = character.inventory + [item]
+    items = [
+        Item(
+            id=item.id,
+            name=item.name,
+            quantity=item.quantity,
+            weight=item.weight,
+            description=item.description,
+        )
+        for item in add_items_to_inventory.items
+    ]
+    updated_inventory = character.inventory + items
     await character_repo.update_character_inventory(character.id, updated_inventory)
+
 
 async def remove_item_from_inventory(
     character_repo: CharacterRepo,
@@ -56,5 +60,9 @@ async def remove_item_from_inventory(
         character: The character to remove the item from the inventory for.
         remove_item_from_inventory: The item to remove from the inventory.
     """
-    updated_inventory = [item for item in character.inventory if item.id != remove_item_from_inventory.item_id]
+    updated_inventory = [
+        item
+        for item in character.inventory
+        if item.id != remove_item_from_inventory.item_id
+    ]
     await character_repo.update_character_inventory(character.id, updated_inventory)
